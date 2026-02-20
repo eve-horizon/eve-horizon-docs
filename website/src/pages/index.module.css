@@ -1,18 +1,85 @@
+/* ============================================================
+   HERO
+   ============================================================ */
+
 .hero {
-  padding: 6rem 0 4rem;
+  position: relative;
+  padding: 7rem 0 5rem;
   text-align: center;
+  overflow: hidden;
+}
+
+/* Animated grid background with radial fade */
+.heroBackground {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--eve-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--eve-border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
+  pointer-events: none;
+}
+
+[data-theme='dark'] .heroBackground {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+}
+
+[data-theme='light'] .heroBackground {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+}
+
+/* Radial glow behind title */
+.heroGlow {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+[data-theme='dark'] .heroGlow {
+  background: radial-gradient(ellipse, rgba(56, 189, 248, 0.06) 0%, transparent 70%);
+}
+
+[data-theme='light'] .heroGlow {
+  background: radial-gradient(ellipse, rgba(2, 132, 199, 0.04) 0%, transparent 70%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
 }
 
 .heroTitle {
-  font-size: 3rem;
-  font-weight: 800;
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-hero);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 0.5em;
+  background: linear-gradient(135deg, var(--eve-text-primary) 40%, var(--eve-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: fadeSlideUp 0.6s ease-out both;
 }
 
 .heroSubtitle {
-  font-size: 1.4rem;
-  opacity: 0.85;
-  max-width: 600px;
-  margin: 0.5rem auto 2rem;
+  font-size: var(--eve-text-lg);
+  color: var(--eve-text-secondary);
+  max-width: 520px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.6;
+  animation: fadeSlideUp 0.6s ease-out 0.1s both;
 }
 
 .heroButtons {
@@ -20,61 +87,370 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
+  animation: fadeSlideUp 0.6s ease-out 0.2s both;
 }
 
+.heroPrimary {
+  position: relative;
+  background: var(--eve-accent);
+  color: #ffffff !important;
+  border: none;
+  padding: 0.75rem 2rem;
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-base);
+  border-radius: 8px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+}
+
+.heroPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px var(--eve-accent-glow), 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.heroSecondary {
+  color: var(--eve-text-primary) !important;
+  border: 1px solid var(--eve-border-accent);
+  background: transparent;
+  padding: 0.75rem 2rem;
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-base);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  text-decoration: none;
+}
+
+.heroSecondary:hover {
+  border-color: var(--eve-accent);
+  background: var(--eve-accent-glow);
+  color: var(--eve-text-primary);
+  text-decoration: none;
+}
+
+/* ============================================================
+   TERMINAL MOCKUP
+   ============================================================ */
+
+.terminal {
+  max-width: 540px;
+  margin: 3rem auto 0;
+  text-align: left;
+  border-radius: 10px;
+  overflow: hidden;
+  animation: fadeSlideUp 0.6s ease-out 0.35s both;
+}
+
+[data-theme='dark'] .terminal {
+  background: #0a0f1a;
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 40px rgba(56, 189, 248, 0.04);
+}
+
+[data-theme='light'] .terminal {
+  background: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.terminalHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.terminalDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.terminalBody {
+  padding: 1rem 1.25rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  line-height: 1.8;
+}
+
+.terminalLine {
+  opacity: 0;
+  animation: terminalReveal 0.3s ease-out forwards;
+}
+
+.terminalLine:nth-child(1) { animation-delay: 0.8s; }
+.terminalLine:nth-child(2) { animation-delay: 1.3s; }
+.terminalLine:nth-child(3) { animation-delay: 1.7s; }
+.terminalLine:nth-child(4) { animation-delay: 2.1s; }
+.terminalLine:nth-child(5) { animation-delay: 2.5s; }
+
+.terminalPrompt {
+  color: var(--eve-green);
+}
+
+.terminalCommand {
+  color: #e8ecf4;
+}
+
+.terminalSuccess {
+  color: var(--eve-green);
+}
+
+.terminalLabel {
+  color: #94a3b8;
+}
+
+/* ============================================================
+   FEATURES SECTION
+   ============================================================ */
+
 .features {
-  padding: 3rem 0;
+  padding: 4rem 0 5rem;
+  position: relative;
+}
+
+.featuresHeading {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--eve-text-primary);
 }
 
 .featureLink {
-  text-decoration: none;
-  color: inherit;
+  text-decoration: none !important;
+  color: inherit !important;
   display: block;
 }
 
-.featureLink:hover {
-  text-decoration: none;
-  color: inherit;
-}
-
 .featureCard {
-  padding: 1.5rem;
-  border-radius: 8px;
+  padding: 1.75rem;
+  border-radius: 10px;
   margin-bottom: 1.5rem;
-  border: 1px solid var(--ifm-color-emphasis-200);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--eve-border);
+  background: var(--eve-bg-surface);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
 }
 
 .featureCard:hover {
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--eve-border-accent);
+  transform: translateY(-2px);
 }
 
-.featureCard h3 {
+[data-theme='dark'] .featureCard:hover {
+  box-shadow: 0 -2px 24px rgba(56, 189, 248, 0.06), 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='light'] .featureCard:hover {
+  box-shadow: 0 -2px 24px rgba(2, 132, 199, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.featureIcon {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 1rem;
+  color: var(--eve-accent);
+  flex-shrink: 0;
+}
+
+.featureTitle {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-lg);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--eve-text-primary);
+}
+
+.featureDescription {
+  margin: 0;
+  color: var(--eve-text-secondary);
+  font-size: var(--eve-text-sm);
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.featureArrow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  color: var(--eve-text-muted);
+  font-size: var(--eve-text-sm);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.featureCard:hover .featureArrow {
+  color: var(--eve-accent);
+  transform: translateX(4px);
+}
+
+/* ============================================================
+   QUICK START STRIP
+   ============================================================ */
+
+.quickStart {
+  padding: 4rem 0 5rem;
+  border-top: 1px solid var(--eve-border);
+}
+
+.quickStartHeading {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--eve-text-primary);
+}
+
+.steps {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.step {
+  text-align: center;
+  flex: 1;
+}
+
+.stepNumber {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: var(--eve-text-xs);
+  font-weight: 500;
+  color: var(--eve-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: 0.5rem;
 }
 
-.featureCard p {
-  margin: 0;
-  opacity: 0.85;
-  font-size: 0.95rem;
-  line-height: 1.5;
+.stepLabel {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-base);
+  font-weight: 600;
+  color: var(--eve-text-primary);
+  margin-bottom: 0.5rem;
 }
+
+.stepCode {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: var(--eve-text-xs);
+  color: var(--eve-text-muted);
+  background: var(--eve-bg-surface);
+  border: 1px solid var(--eve-border);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  display: inline-block;
+}
+
+[data-theme='dark'] .stepCode {
+  background: var(--eve-bg-elevated);
+}
+
+.stepConnector {
+  display: flex;
+  align-items: center;
+  padding-top: 1.75rem;
+  color: var(--eve-text-muted);
+  opacity: 0.4;
+  font-size: 1.25rem;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes terminalReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroTitle,
+  .heroSubtitle,
+  .heroButtons,
+  .terminal,
+  .terminalLine {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 
 @media screen and (max-width: 996px) {
   .hero {
-    padding: 3rem 1.5rem 2rem;
+    padding: 4rem 1.5rem 3rem;
   }
 
   .heroTitle {
-    font-size: 2.2rem;
+    font-size: 2.5rem;
   }
 
   .heroSubtitle {
-    font-size: 1.1rem;
+    font-size: var(--eve-text-base);
   }
 
   .heroButtons {
     flex-direction: column;
+  }
+
+  .terminal {
+    max-width: 100%;
+    margin-top: 2rem;
+  }
+
+  .steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .stepConnector {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .terminalBody {
+    font-size: 0.7rem;
   }
 }

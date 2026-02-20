@@ -11,6 +11,31 @@ const config: Config = {
     v4: true,
   },
 
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.googleapis.com',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossorigin: 'anonymous',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Outfit:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+      },
+    },
+  ],
+
   url: 'https://docs.eve-horizon.dev',
   baseUrl: '/',
 
@@ -154,7 +179,17 @@ const config: Config = {
       additionalLanguages: ['bash', 'yaml', 'json', 'toml'],
     },
     mermaid: {
-      theme: { light: 'neutral', dark: 'dark' },
+      theme: { light: 'base', dark: 'base' },
+      options: {
+        themeVariables: {
+          fontFamily: '"Geist", system-ui, sans-serif',
+          fontSize: '14px',
+        },
+        flowchart: {
+          curve: 'basis',
+          padding: 16,
+        },
+      },
     },
   } satisfies Preset.ThemeConfig,
 };

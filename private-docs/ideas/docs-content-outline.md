@@ -2,7 +2,8 @@
 
 > Comprehensive content tree for the Docusaurus docs site.
 > Each entry includes: page path, title, one-line purpose, key sections, and source doc mappings.
-> Audience: new users (primary), advanced users and agents (secondary).
+Audience: app builders and operators deploying/managing applications on Eve Horizon (primary), and advanced users and agents (secondary).
+Scope note: platform implementation details, operator tooling, and internal Eve Horizon development topics are out of scope.
 
 ---
 
@@ -71,7 +72,7 @@ Changelog
 Sections:
 - What is Eve Horizon? (one paragraph)
 - Core philosophy: CLI-first, job-centric, event-driven, skills-based, isolated execution
-- Who is it for? (developer teams, AI-augmented workflows, platform engineers)
+- Who is it for? (app teams, AI-augmented development teams, solo operators, technical founders)
 - How it works (simplified execution flow diagram)
 - What can it do? (table: CI/CD, code review, docs, development, custom workflows)
 - Architecture at a glance (simplified system diagram)
@@ -92,7 +93,7 @@ Sections:
 - Prerequisites (Node.js 18+, SSH key, GitHub account)
 - Install via npm/pnpm
 - Verify installation (`eve --help`)
-- Install from source (for contributors)
+- Keep CLI updated (`npm/pnpm upgrade`)
 - Shell completions (if available)
 
 Sources: `user-getting-started-guide.md`, `cli-tools-and-credentials.md`
@@ -102,7 +103,7 @@ Sources: `user-getting-started-guide.md`, `cli-tools-and-credentials.md`
 #### 1.3 `docs/get-started/quickstart`
 
 **Title:** Quickstart (5 minutes)
-**Purpose:** Fastest path from zero to a running job.
+**Purpose:** Fastest path from zero to your first deployed app workflow.
 
 Sections:
 - Initialize a project (`eve init my-project`)
@@ -748,23 +749,22 @@ Sources: `eve-docs-site-bootstrap.md`
 #### 5.1 `docs/operations/deployment-guide`
 
 **Title:** Deployment Guide
-**Purpose:** Deploy Eve Horizon and user apps — from local k3d to production k8s.
+**Purpose:** Deploy and operate your Eve Horizon app from local to staging and production.
 
 Sections:
-- Runtime modes (Docker Compose vs. Kubernetes)
+- Runtime modes for app teams (Docker Compose vs. Kubernetes)
 - Docker Compose quick start (`./bin/eh start docker`)
 - Kubernetes quick start (`./bin/eh k8s start`, `k8s deploy`, `k8s status`)
-- K8s architecture (API, orchestrator, worker, runner pods, Postgres)
+- Deployment topology for app environments (app services, ingress, secrets, runners)
 - Ingress routing (URL pattern, domain resolution, local `lvh.me`)
 - TLS (cert-manager, wildcard certs)
-- Worker image registry (ECR images, versioning, tagging, multi-arch)
 - Version pinning strategy (production, dev, security updates)
 - Manifest variable interpolation at deploy time
 - Secrets provisioning (system secrets → K8s → restart)
 - Digest-based deployments (immutable image references)
-- AWS deployment (k3s on VPS, infra template repo)
+- Optional deployment architectures (VPS Kubernetes, managed cloud)
 - Comparison: Docker Compose vs. K8s (table)
-- Web auth services (GoTrue, SSO broker, Mailpit)
+- Authentication integration options for apps (SSO broker, tenant auth flows)
 
 Sources: `deployment.md`, `k8s-local-stack.md`
 
@@ -874,7 +874,7 @@ Format: Docusaurus blog — one post per release or significant change.
 | Environments | Promotion flow | Sequence diagram | Build once → promote through stages |
 | Chat & Conversations | Chat message flow | Sequence diagram | Slack → gateway → route → job → reply |
 | Orchestration Patterns | Team dispatch | Sequence diagram | Lead → children → coordination → results |
-| Deployment Guide | K8s architecture | Architecture | Services, pods, volumes, ingress |
+| Deployment Guide | Deployment topology | Architecture | App services, ingress, envs, dependencies |
 | Harnesses & Workers | Invocation flow | Flowchart | Worker → eve-agent-cli → harness |
 
 ---

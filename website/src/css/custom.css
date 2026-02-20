@@ -1,64 +1,665 @@
 /**
- * Eve Horizon docs theme — dark-first, clean, technical.
- * Overrides Infima CSS variables for both light and dark modes.
+ * Eve Horizon docs theme — precision-engineered futurism.
+ * Dark-first, luminous accents, crystalline typography.
+ *
+ * Design system: private-docs/ideas/design-refactor-plan.md
  */
 
+/* ============================================================
+   1. COLOR SYSTEM
+   ============================================================ */
+
 :root {
-  /* Eve brand: deep blue primary */
-  --ifm-color-primary: #3b82f6;
-  --ifm-color-primary-dark: #2563eb;
-  --ifm-color-primary-darker: #1d4ed8;
-  --ifm-color-primary-darkest: #1e40af;
-  --ifm-color-primary-light: #60a5fa;
-  --ifm-color-primary-lighter: #93bbfd;
-  --ifm-color-primary-lightest: #bfdbfe;
+  /* Background layers */
+  --eve-bg-deep: #f8fafc;
+  --eve-bg-surface: #ffffff;
+  --eve-bg-elevated: #f1f5f9;
+  --eve-bg-overlay: #e2e8f0;
 
-  --ifm-code-font-size: 95%;
-  --ifm-font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Text hierarchy */
+  --eve-text-primary: #0f172a;
+  --eve-text-secondary: #475569;
+  --eve-text-muted: #94a3b8;
+
+  /* Brand accent */
+  --eve-accent: #0284c7;
+  --eve-accent-hover: #0369a1;
+  --eve-accent-glow: rgba(2, 132, 199, 0.08);
+
+  /* Borders */
+  --eve-border: rgba(15, 23, 42, 0.06);
+  --eve-border-accent: rgba(2, 132, 199, 0.2);
+
+  /* Semantic */
+  --eve-green: #059669;
+  --eve-amber: #d97706;
+  --eve-red: #dc2626;
+  --eve-purple: #7c3aed;
+  --eve-cyan: #0891b2;
+
+  /* Infima overrides */
+  --ifm-color-primary: #0284c7;
+  --ifm-color-primary-dark: #0369a1;
+  --ifm-color-primary-darker: #075985;
+  --ifm-color-primary-darkest: #0c4a6e;
+  --ifm-color-primary-light: #0ea5e9;
+  --ifm-color-primary-lighter: #38bdf8;
+  --ifm-color-primary-lightest: #7dd3fc;
+
+  --ifm-background-color: var(--eve-bg-deep);
+  --ifm-background-surface-color: var(--eve-bg-surface);
+
+  /* Typography */
+  --ifm-font-family-base: 'Geist', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Outfit', system-ui, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   --ifm-heading-font-weight: 700;
+  --ifm-code-font-size: 92%;
 
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+  /* Type scale */
+  --eve-text-xs: 0.75rem;
+  --eve-text-sm: 0.875rem;
+  --eve-text-base: 1rem;
+  --eve-text-lg: 1.125rem;
+  --eve-text-xl: 1.25rem;
+  --eve-text-2xl: 1.5rem;
+  --eve-text-3xl: 1.875rem;
+  --eve-text-4xl: 2.5rem;
+  --eve-text-hero: 3.5rem;
+
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.06);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #60a5fa;
-  --ifm-color-primary-dark: #3b82f6;
-  --ifm-color-primary-darker: #2563eb;
-  --ifm-color-primary-darkest: #1d4ed8;
-  --ifm-color-primary-light: #93bbfd;
-  --ifm-color-primary-lighter: #bfdbfe;
-  --ifm-color-primary-lightest: #dbeafe;
+  /* Background layers */
+  --eve-bg-deep: #06090f;
+  --eve-bg-surface: #0c1220;
+  --eve-bg-elevated: #131c2e;
+  --eve-bg-overlay: #1a2540;
 
-  --ifm-background-color: #0f172a;
-  --ifm-background-surface-color: #1e293b;
-  --ifm-navbar-background-color: #0f172a;
-  --ifm-footer-background-color: #020617;
+  /* Text hierarchy */
+  --eve-text-primary: #e8ecf4;
+  --eve-text-secondary: #94a3b8;
+  --eve-text-muted: #64748b;
+
+  /* Brand accent */
+  --eve-accent: #38bdf8;
+  --eve-accent-hover: #7dd3fc;
+  --eve-accent-glow: rgba(56, 189, 248, 0.15);
+
+  /* Borders */
+  --eve-border: rgba(148, 163, 184, 0.08);
+  --eve-border-accent: rgba(56, 189, 248, 0.25);
+
+  /* Semantic */
+  --eve-green: #34d399;
+  --eve-amber: #fbbf24;
+  --eve-red: #f87171;
+  --eve-purple: #a78bfa;
+  --eve-cyan: #22d3ee;
+
+  /* Infima overrides */
+  --ifm-color-primary: #38bdf8;
+  --ifm-color-primary-dark: #0ea5e9;
+  --ifm-color-primary-darker: #0284c7;
+  --ifm-color-primary-darkest: #0369a1;
+  --ifm-color-primary-light: #7dd3fc;
+  --ifm-color-primary-lighter: #bae6fd;
+  --ifm-color-primary-lightest: #e0f2fe;
+
+  --ifm-background-color: var(--eve-bg-deep);
+  --ifm-background-surface-color: var(--eve-bg-surface);
+  --ifm-navbar-background-color: rgba(6, 9, 15, 0.85);
+  --ifm-footer-background-color: #030508;
 
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
 }
 
-/* Navbar refinements */
+/* ============================================================
+   2. THEME TRANSITIONS
+   ============================================================ */
+
+html {
+  transition: background-color 0.3s ease, color 0.2s ease;
+}
+
+.navbar,
+.footer,
+.main-wrapper,
+.theme-doc-sidebar-container,
+.docusaurus-mermaid-container {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ============================================================
+   3. NAVBAR
+   ============================================================ */
+
 .navbar {
   box-shadow: none;
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid var(--eve-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* Sidebar refinements */
+[data-theme='dark'] .navbar {
+  background: rgba(6, 9, 15, 0.85);
+}
+
+[data-theme='light'] .navbar {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.navbar__title {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.navbar__link--active {
+  position: relative;
+}
+
+.navbar__link--active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--eve-accent);
+  border-radius: 1px;
+}
+
+/* ============================================================
+   4. SIDEBAR
+   ============================================================ */
+
 .theme-doc-sidebar-container {
-  border-right: 1px solid var(--ifm-color-emphasis-200);
+  border-right: 1px solid var(--eve-border) !important;
 }
 
-/* Mermaid diagram containers */
-.docusaurus-mermaid-container {
-  margin: 1.5rem 0;
+[data-theme='dark'] .theme-doc-sidebar-container {
+  background: var(--eve-bg-surface);
 }
 
-/* Code block refinements */
+/* Active sidebar item */
+.menu__link--active:not(.menu__link--sublist) {
+  background: var(--eve-accent-glow);
+  border-left: 2px solid var(--eve-accent);
+  padding-left: calc(var(--ifm-menu-link-padding-horizontal) - 2px);
+  color: var(--eve-accent);
+  font-weight: 500;
+}
+
+/* Category headers */
+.menu__link--sublist {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--eve-text-muted);
+}
+
+/* ============================================================
+   5. DOC CONTENT AREA
+   ============================================================ */
+
+.markdown {
+  line-height: 1.75;
+}
+
+.markdown h1 {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-4xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.5em;
+}
+
+.markdown h2 {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-3xl);
+  font-weight: 600;
+  margin-top: 2.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--eve-border);
+  letter-spacing: -0.02em;
+}
+
+.markdown h3 {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-2xl);
+  font-weight: 600;
+  margin-top: 2em;
+  letter-spacing: -0.015em;
+}
+
+.markdown h4 {
+  font-family: var(--ifm-heading-font-family);
+  font-size: var(--eve-text-xl);
+  font-weight: 600;
+  margin-top: 1.5em;
+}
+
+/* ============================================================
+   6. CODE BLOCKS
+   ============================================================ */
+
+[data-theme='dark'] pre {
+  background: #0a0f1a !important;
+  border: 1px solid var(--eve-border);
+  border-radius: 8px;
+}
+
+[data-theme='light'] pre {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
+}
+
+code {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: var(--ifm-code-font-size);
+  border-radius: 4px;
+}
+
 .prism-code {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
 }
 
-/* Footer */
+/* Inline code */
+:not(pre) > code {
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] :not(pre) > code {
+  background: var(--eve-bg-elevated);
+  border: 1px solid var(--eve-border);
+}
+
+[data-theme='light'] :not(pre) > code {
+  background: var(--eve-bg-elevated);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* ============================================================
+   7. ADMONITIONS
+   ============================================================ */
+
+.admonition {
+  border-radius: 8px;
+  border-width: 0;
+  border-left: 3px solid;
+  background: var(--eve-bg-surface);
+}
+
+[data-theme='dark'] .admonition {
+  background: var(--eve-bg-elevated);
+}
+
+.admonition-note { border-left-color: var(--eve-accent); }
+.admonition-tip { border-left-color: var(--eve-green); }
+.admonition-info { border-left-color: var(--eve-cyan); }
+.admonition-warning { border-left-color: var(--eve-amber); }
+.admonition-danger { border-left-color: var(--eve-red); }
+.admonition-caution { border-left-color: var(--eve-amber); }
+
+.admonition .admonition-heading {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   8. TABLES
+   ============================================================ */
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--eve-border);
+}
+
+th {
+  background: var(--eve-bg-surface);
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--eve-text-muted);
+}
+
+[data-theme='dark'] th {
+  background: var(--eve-bg-elevated);
+}
+
+tr:nth-child(even) td {
+  background: var(--eve-bg-surface);
+}
+
+[data-theme='dark'] tr:nth-child(even) td {
+  background: var(--eve-bg-elevated);
+}
+
+td, th {
+  border-color: var(--eve-border) !important;
+}
+
+/* ============================================================
+   9. FOOTER
+   ============================================================ */
+
 .footer--dark {
-  background-color: var(--ifm-footer-background-color, #1e293b);
+  background-color: var(--eve-bg-deep);
+  border-top: 1px solid var(--eve-border);
+}
+
+[data-theme='dark'] .footer--dark {
+  background-color: #030508;
+}
+
+.footer__title {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  font-size: var(--eve-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--eve-text-muted);
+}
+
+.footer__link-item {
+  font-size: var(--eve-text-sm);
+}
+
+/* ============================================================
+   10. MERMAID DIAGRAMS
+   ============================================================ */
+
+.docusaurus-mermaid-container {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--eve-bg-surface);
+  border: 1px solid var(--eve-border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.docusaurus-mermaid-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+/* ---- Dark mode diagram colors ---- */
+
+[data-theme='dark'] .docusaurus-mermaid-container {
+  background: rgba(12, 18, 32, 0.6);
+  border-color: rgba(56, 189, 248, 0.1);
+}
+
+/* Flowchart nodes */
+[data-theme='dark'] .node rect,
+[data-theme='dark'] .node polygon,
+[data-theme='dark'] .node circle,
+[data-theme='dark'] .node ellipse {
+  fill: var(--eve-bg-elevated) !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+/* Flowchart node labels */
+[data-theme='dark'] .nodeLabel,
+[data-theme='dark'] .node .label,
+[data-theme='dark'] .label text {
+  color: var(--eve-text-primary) !important;
+  fill: var(--eve-text-primary) !important;
+}
+
+/* Flowchart edges */
+[data-theme='dark'] .edgePath .path,
+[data-theme='dark'] .flowchart-link {
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+  opacity: 0.5;
+}
+
+/* Edge labels */
+[data-theme='dark'] .edgeLabel {
+  background-color: var(--eve-bg-surface) !important;
+  color: var(--eve-text-secondary) !important;
+}
+
+[data-theme='dark'] .edgeLabel rect {
+  fill: var(--eve-bg-surface) !important;
+  opacity: 1 !important;
+}
+
+[data-theme='dark'] .edgeLabel .label text {
+  fill: var(--eve-text-secondary) !important;
+}
+
+/* Arrowheads / markers */
+[data-theme='dark'] marker path {
+  fill: var(--eve-accent) !important;
+  stroke: var(--eve-accent) !important;
+}
+
+[data-theme='dark'] defs #statediagram-barbEnd {
+  fill: var(--eve-accent) !important;
+  stroke: var(--eve-accent) !important;
+}
+
+/* State diagram nodes (path-based shapes) */
+[data-theme='dark'] .statediagram-state .label-container path,
+[data-theme='dark'] .statediagram-state .outer-path path {
+  fill: var(--eve-bg-elevated) !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+[data-theme='dark'] .statediagram-state .label-container path:first-child {
+  fill: var(--eve-bg-elevated) !important;
+}
+
+[data-theme='dark'] .statediagram-state .label-container path:nth-child(2) {
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+[data-theme='dark'] g.stateGroup rect {
+  fill: var(--eve-bg-elevated) !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+[data-theme='dark'] g.stateGroup text,
+[data-theme='dark'] .stateLabel text,
+[data-theme='dark'] g.stateGroup .state-title {
+  fill: var(--eve-text-primary) !important;
+}
+
+[data-theme='dark'] .stateLabel .box {
+  fill: var(--eve-bg-elevated) !important;
+  stroke: none !important;
+}
+
+/* State transitions */
+[data-theme='dark'] .transition {
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+  opacity: 0.5;
+}
+
+[data-theme='dark'] g.stateGroup line {
+  stroke: var(--eve-accent) !important;
+  opacity: 0.3;
+}
+
+/* State start/end markers */
+[data-theme='dark'] .node circle.state-start {
+  fill: var(--eve-accent) !important;
+  stroke: var(--eve-accent) !important;
+}
+
+[data-theme='dark'] .node .end-state-outer {
+  stroke: var(--eve-accent) !important;
+}
+
+[data-theme='dark'] .node .end-state-inner {
+  fill: var(--eve-accent) !important;
+}
+
+/* State diagram composites */
+[data-theme='dark'] .stateGroup .composit {
+  fill: var(--eve-bg-surface) !important;
+}
+
+/* State diagram divider */
+[data-theme='dark'] .statediagram-state rect.divider {
+  fill: var(--eve-border) !important;
+  stroke: none !important;
+}
+
+/* Notes */
+[data-theme='dark'] .state-note rect {
+  fill: var(--eve-bg-overlay) !important;
+  stroke: var(--eve-amber) !important;
+}
+
+[data-theme='dark'] .state-note text {
+  fill: var(--eve-text-secondary) !important;
+}
+
+/* ---- Light mode diagram colors ---- */
+
+[data-theme='light'] .docusaurus-mermaid-container {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Flowchart nodes */
+[data-theme='light'] .node rect,
+[data-theme='light'] .node polygon,
+[data-theme='light'] .node circle,
+[data-theme='light'] .node ellipse {
+  fill: #ffffff !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+/* Flowchart edges */
+[data-theme='light'] .edgePath .path,
+[data-theme='light'] .flowchart-link {
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+  opacity: 0.5;
+}
+
+[data-theme='light'] marker path {
+  fill: var(--eve-accent) !important;
+  stroke: var(--eve-accent) !important;
+}
+
+[data-theme='light'] .edgeLabel {
+  background-color: #f8fafc !important;
+}
+
+[data-theme='light'] .edgeLabel rect {
+  fill: #f8fafc !important;
+}
+
+/* State diagram nodes (light) */
+[data-theme='light'] .statediagram-state .label-container path,
+[data-theme='light'] .statediagram-state .outer-path path {
+  fill: #ffffff !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+[data-theme='light'] .statediagram-state .label-container path:first-child {
+  fill: #ffffff !important;
+}
+
+[data-theme='light'] g.stateGroup rect {
+  fill: #ffffff !important;
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+}
+
+[data-theme='light'] .stateLabel .box {
+  fill: #ffffff !important;
+}
+
+[data-theme='light'] .transition {
+  stroke: var(--eve-accent) !important;
+  stroke-width: 1.5px !important;
+  opacity: 0.5;
+}
+
+[data-theme='light'] defs #statediagram-barbEnd {
+  fill: var(--eve-accent) !important;
+  stroke: var(--eve-accent) !important;
+}
+
+/* ============================================================
+   11. SCROLL PROGRESS INDICATOR
+   ============================================================ */
+
+@supports (animation-timeline: scroll()) {
+  .theme-doc-markdown::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--eve-accent);
+    transform-origin: left;
+    transform: scaleX(0);
+    z-index: 1000;
+    animation: grow-progress linear;
+    animation-timeline: scroll();
+  }
+
+  @keyframes grow-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+}
+
+/* ============================================================
+   12. SEARCH
+   ============================================================ */
+
+.search-bar input {
+  font-family: var(--ifm-font-family-base);
+  border-radius: 8px;
+}
+
+/* ============================================================
+   13. REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  .navbar,
+  .footer,
+  .main-wrapper,
+  .theme-doc-sidebar-container,
+  .docusaurus-mermaid-container {
+    transition: none !important;
+  }
+
+  .theme-doc-markdown::before {
+    animation: none !important;
+  }
 }
