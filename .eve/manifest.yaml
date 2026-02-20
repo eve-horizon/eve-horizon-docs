@@ -24,9 +24,6 @@ services:
 environments:
   staging:
     pipeline: deploy
-  production:
-    pipeline: deploy
-    approval: required
 
 pipelines:
   deploy:
