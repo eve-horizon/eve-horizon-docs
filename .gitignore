@@ -27,9 +27,6 @@ dist/
 *~
 tmp/
 
-# Eve local profile (credentials/defaults)
-.eve/profile.yaml
-
 # Environment files
 .env
 .env.*
