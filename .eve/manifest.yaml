@@ -1,0 +1,45 @@
+schema: eve/compose/v2
+project: eve-horizon-docs
+
+registry: "eve"
+
+services:
+  docs:
+    build:
+      context: ./website
+    ports: [3000]
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    x-eve:
+      ingress:
+        public: true
+        port: 3000
+        alias: docs
+
+environments:
+  staging:
+    pipeline: deploy
+  production:
+    pipeline: deploy
+    approval: required
+
+pipelines:
+  deploy:
+    trigger:
+      github:
+        event: push
+        branch: main
+    steps:
+      - name: build
+        action: { type: build }
+      - name: release
+        depends_on: [build]
+        action: { type: release }
+      - name: deploy
+        depends_on: [release]
+        action: { type: deploy }
