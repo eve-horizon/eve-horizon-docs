@@ -48,7 +48,19 @@ If your checkout differs, update the skill config or environment overrides used 
 
 ## Deployment
 
-Docs are deployed as a single Eve service (static site + search endpoints in one container).
-Search and agent-discovery artifacts are generated at build time.
+Deployed via Eve Horizon under the **Incept5** org, project slug `evdocs`.
 
-See `private-docs/ideas/eve-docs-site-bootstrap.md` for the full plan and execution phases.
+```bash
+# First time: create a staging profile and login
+eve profile create staging --api-url https://api.eh1.incept5.dev
+eve profile use staging
+eve auth login --email you@incept5.com --ssh-key ~/.ssh/id_ed25519.pub
+eve profile set --org org_Incept5 --project proj_01khygftvpf24t3yyetbkk9nyn
+
+# Sync manifest and deploy to staging
+eve project sync --repo-dir .
+eve env deploy staging --ref main --repo-dir .
+```
+
+The deploy pipeline builds the Docusaurus site, creates a release, and deploys it as a
+single container (static HTML + Express for `/api/search` and `/api/health`).
