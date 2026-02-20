@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,7 +8,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const BUILD_DIR = join(__dirname, "build");
 
 const MIME = {
-  ".html": "text/html",
+  ".html": "text/html; charset=utf-8",
   ".css": "text/css",
   ".js": "application/javascript",
   ".json": "application/json",
@@ -18,12 +18,16 @@ const MIME = {
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
   ".woff": "font/woff",
-  ".txt": "text/plain",
+  ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml",
 };
 
+function isFile(p) {
+  try { return statSync(p).isFile(); } catch { return false; }
+}
+
 function serveFile(res, filePath) {
-  if (!existsSync(filePath)) return false;
+  if (!isFile(filePath)) return false;
   const ext = extname(filePath);
   res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
   res.end(readFileSync(filePath));
@@ -41,9 +45,11 @@ const server = createServer((req, res) => {
     return;
   }
 
-  // Static files
+  // Static file (exact match)
   const filePath = join(BUILD_DIR, pathname);
   if (serveFile(res, filePath)) return;
+
+  // Directory → try index.html
   if (serveFile(res, join(filePath, "index.html"))) return;
 
   // SPA fallback
