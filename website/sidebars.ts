@@ -27,6 +27,8 @@ const sidebars: SidebarsConfig = {
         'guides/chat',
         'guides/local-development',
         'guides/secrets-and-auth',
+        'guides/fullstack-app-design',
+        'guides/agentic-app-design',
       ],
     },
     {
@@ -43,6 +45,7 @@ const sidebars: SidebarsConfig = {
         'reference/environment-gating',
         'reference/harnesses-and-workers',
         'reference/openapi',
+        'reference/cli-appendix',
       ],
     },
     {
