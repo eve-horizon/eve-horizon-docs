@@ -141,7 +141,9 @@ The manifest declares everything the platform needs — a single `api` service w
 
 ## 6. Push to GitHub and link the repo
 
-The platform needs to clone your code to build it. Push to a Git remote and link it:
+The platform needs to clone your code to build it. Push to a Git remote and link it.
+
+### Public repo
 
 ```bash
 # Create the remote and push (using GitHub CLI)
@@ -157,6 +159,31 @@ You can create the repo manually and use standard Git commands:
 git remote add origin https://github.com/my-org/my-app.git
 git push -u origin main
 ```
+:::
+
+### Private repo
+
+If your repo is private, the platform needs a token to clone it. Create a **fine-grained personal access token** on GitHub with **Contents → Read** permission scoped to your repo, then store it as a project secret:
+
+```bash
+# Create a private repo
+gh repo create my-org/my-app --private --source . --push
+
+# Store the token so Eve can clone during builds
+eve secrets set GITHUB_TOKEN ghp_xxxxxxxxxxxx --project proj_xxx
+
+# Link the repo
+eve project update proj_xxx --repo-url https://github.com/my-org/my-app
+```
+
+Eve automatically injects `GITHUB_TOKEN` into the clone URL when building from a private repo. If the token is missing or lacks the right permissions, the build will fail with a clear error telling you to set it.
+
+:::tip Creating a fine-grained PAT
+Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**. Set:
+- **Repository access** → Only select repositories → pick your repo
+- **Permissions** → Repository permissions → **Contents** → Read-only
+
+This follows the principle of least privilege — the token can only read code from the repos you choose.
 :::
 
 ## 7. Sync and deploy
