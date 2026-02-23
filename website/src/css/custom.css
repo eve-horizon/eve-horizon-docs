@@ -222,7 +222,7 @@ html {
   font-family: var(--ifm-heading-font-family);
   font-size: var(--eve-text-3xl);
   font-weight: 600;
-  margin-top: 2.5em;
+  margin-top: 1.75em;
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--eve-border);
   letter-spacing: -0.02em;
@@ -232,7 +232,7 @@ html {
   font-family: var(--ifm-heading-font-family);
   font-size: var(--eve-text-2xl);
   font-weight: 600;
-  margin-top: 2em;
+  margin-top: 1.5em;
   letter-spacing: -0.015em;
 }
 
@@ -240,7 +240,7 @@ html {
   font-family: var(--ifm-heading-font-family);
   font-size: var(--eve-text-xl);
   font-weight: 600;
-  margin-top: 1.5em;
+  margin-top: 1.25em;
 }
 
 /* ============================================================
@@ -373,11 +373,16 @@ td, th {
   font-size: var(--eve-text-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--eve-text-muted);
+  color: var(--eve-text-primary);
 }
 
 .footer__link-item {
   font-size: var(--eve-text-sm);
+  color: var(--eve-text-secondary);
+}
+
+.footer__link-item:hover {
+  color: var(--eve-accent);
 }
 
 /* ============================================================

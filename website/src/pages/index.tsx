@@ -234,23 +234,36 @@ function QuickStart() {
         <Heading as="h2" className={styles.quickStartHeading}>
           Start in 60 Seconds
         </Heading>
-        <div className={styles.steps}>
-          <div className={styles.step}>
-            <div className={styles.stepNumber}>01</div>
-            <div className={styles.stepLabel}>Install</div>
-            <code className={styles.stepCode}>brew install eve</code>
+        <div className={`${styles.terminal} ${styles.quickTerminal}`}>
+          <div className={styles.terminalHeader}>
+            <span className={styles.terminalDot} />
+            <span className={styles.terminalDot} />
+            <span className={styles.terminalDot} />
           </div>
-          <div className={styles.stepConnector}>&rarr;</div>
-          <div className={styles.step}>
-            <div className={styles.stepNumber}>02</div>
-            <div className={styles.stepLabel}>Init</div>
-            <code className={styles.stepCode}>eve init</code>
-          </div>
-          <div className={styles.stepConnector}>&rarr;</div>
-          <div className={styles.step}>
-            <div className={styles.stepNumber}>03</div>
-            <div className={styles.stepLabel}>Deploy</div>
-            <code className={styles.stepCode}>eve deploy</code>
+          <div className={styles.terminalBody}>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalPrompt}>$ </span>
+              <span className={styles.terminalCommand}>npm install -g @eve-horizon/cli</span>
+            </div>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalPrompt}>$ </span>
+              <span className={styles.terminalCommand}>mkdir my-project && cd my-project</span>
+            </div>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalPrompt}>$ </span>
+              <span className={styles.terminalCommand}>eve skills install https://github.com/incept5/eve-skillpacks</span>
+            </div>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalPrompt}>$ </span>
+              <span className={styles.terminalCommand}>claude</span>
+            </div>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalComment}>{'# inside Claude, run:'}</span>
+            </div>
+            <div className={styles.terminalLine}>
+              <span className={styles.terminalAgent}>&gt; </span>
+              <span className={styles.terminalCommand}>/eve-bootstrap</span>
+            </div>
           </div>
         </div>
       </div>

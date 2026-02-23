@@ -1,187 +1,268 @@
 ---
 title: Quickstart
-description: Initialize a project, create your first AI job, and watch it run — in five minutes.
+description: Zero to a deployed app on the Eve platform — install, scaffold, deploy, verify.
 sidebar_position: 3
 ---
 
 # Quickstart
 
-This guide takes you from zero to a running AI job in about five minutes. You will initialize a project from the starter template, authenticate with the platform, create a job, and watch the result.
+This guide takes a new user from zero to a deployed app on the Eve platform. Every command below has been tested against the live staging environment. By the end, you will have a running fullstack app with a public URL.
+
+Your AI coding agent (Claude Code, Cursor, Codex, etc.) handles the code. These instructions are for *you* — the human at the controls.
 
 ## Prerequisites
 
-- The `eve` CLI installed and on your PATH ([Install the CLI](./install.md))
-- Node.js 22+ and Git
-- An SSH key at `~/.ssh/id_ed25519` (or equivalent)
+- **Node.js 22+** and **Git** installed
+- An **SSH key** — `~/.ssh/id_ed25519` recommended. Generate one with `ssh-keygen -t ed25519` if you don't have one.
+- The **`eve` CLI** installed and on your PATH ([Install the CLI](./install.md))
 
-## 1. Initialize a project
+## 1. Get access
 
-The `eve init` command clones the starter template, sets up a fresh Git repo, and installs skills:
+You need an account on the Eve platform before you can do anything.
+
+**If an admin is onboarding you** — ask them to run:
 
 ```bash
-eve init my-project
-cd my-project
+eve admin invite --email you@example.com --ssh-key ~/.ssh/id_ed25519.pub
 ```
 
-This creates a directory with:
-- A `.eve/manifest.yaml` ready for customization
-- Pre-installed skills in `.agents/skills/`
-- A clean Git history (template history is removed)
+**If you're requesting access yourself:**
 
-:::tip Already have a repo?
-You can add Eve to an existing repository by creating `.eve/manifest.yaml` manually and running `eve skills install`. See [Your First Deploy](./first-deploy.md) for the manifest format.
-:::
+```bash
+eve auth request-access \
+  --org "Your Org" \
+  --ssh-key ~/.ssh/id_ed25519.pub \
+  --email you@example.com \
+  --wait
+```
 
-## 2. Set up your profile and authenticate
+This submits a request and polls until an admin approves it. The admin approves with:
 
-If you already created a profile during installation, skip to authentication. Otherwise, create one now:
+```bash
+eve admin access-requests approve <request-id>
+```
+
+## 2. Log in
+
+Once your access is approved:
+
+```bash
+eve auth login --email you@example.com
+```
+
+Verify you're authenticated:
+
+```bash
+eve auth status
+```
+
+## 3. Create your org and project
+
+```bash
+eve org ensure "My Company" --slug myco
+eve project ensure --name "My App" --slug myapp
+```
+
+Note the project ID returned (e.g., `proj_xxx`) — you'll need it in the next step.
+
+## 4. Scaffold from the starter template
+
+```bash
+eve init my-app
+cd my-app
+```
+
+This creates a fullstack app with a Node.js API, HTML frontend, agent definitions, and 24 pre-installed skills. It also initializes a fresh Git repo.
+
+## 5. Configure
+
+Three things need setting up inside your new project directory.
+
+**Set profile defaults** — this tells the CLI which org and project to target:
 
 ```bash
 eve profile create staging --api-url https://api.eh1.incept5.dev
 eve profile use staging
+eve profile set --org org_MyCompany --project proj_xxx
 ```
 
-### New users: run the bootstrap skill
+:::warning Run from the project directory
+The CLI reads `.eve/profile.yaml` relative to your working directory. Always run `eve` commands from inside your project root.
+:::
 
-Open the project in your AI coding agent (Claude Code, Cursor, or similar) and ask it:
+**Update the manifest slug** — open `.eve/manifest.yaml` and change the project slug from the template default to your actual project slug. The generated manifest looks like this:
 
-> "Run the eve-bootstrap skill"
+```yaml
+schema: eve/compose/v2
+project: eve-starter          # ← change this to your project slug
 
-The bootstrap skill handles the full onboarding flow:
-1. Creates your profile if it does not exist
-2. Submits an access request with your SSH key
-3. Waits for admin approval (an admin runs `eve admin access-requests approve <id>`)
-4. Logs you in automatically once approved
-5. Helps you configure your project and manifest
+registry: "eve"
 
-### Existing users: log in directly
+services:
+  api:
+    build:
+      context: apps/api
+    ports: [3000]
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: curl -f http://localhost:3000/health || exit 1
+    x-eve:
+      ingress:
+        public: true
+        port: 3000
+      api_spec:
+        spec_url: /openapi.json
+
+environments:
+  sandbox:
+    type: persistent
+
+pipelines:
+  deploy-sandbox:
+    steps:
+      - name: build
+        action: { type: build }
+      - name: release
+        depends_on: [build]
+        action: { type: release }
+      - name: deploy
+        depends_on: [release]
+        action: { type: deploy, env_name: sandbox }
+```
+
+Change `project: eve-starter` to your slug:
+
+```yaml
+project: myapp
+```
+
+The manifest declares everything the platform needs — a single `api` service with public ingress, a `sandbox` environment, and a deploy pipeline that builds, releases, and deploys. You'll customize this later as your app grows.
+
+## 6. Push to GitHub and link the repo
+
+The platform needs to clone your code to build it. Push to a Git remote and link it:
 
 ```bash
-eve auth login
-eve auth status
+# Create the remote and push (using GitHub CLI)
+gh repo create my-org/my-app --public --source . --push
+
+# Tell Eve where your code lives
+eve project update proj_xxx --repo-url https://github.com/my-org/my-app
 ```
 
-### Set your defaults
+:::tip No GitHub CLI?
+You can create the repo manually and use standard Git commands:
+```bash
+git remote add origin https://github.com/my-org/my-app.git
+git push -u origin main
+```
+:::
 
-Once authenticated, bind your CLI to your organization and project:
+## 7. Sync and deploy
+
+Sync your manifest to the platform, then deploy:
 
 ```bash
-eve org list
-eve project list
-
-eve profile set --org org_xxx --project proj_xxx
+eve project sync
+eve env deploy sandbox --ref main
 ```
 
-If you need to create the project:
+`eve env deploy` is the single deploy command. Because the sandbox environment has a pipeline configured in the manifest, it automatically triggers the full build → release → deploy flow. The command watches progress and reports when done:
+
+```
+Resolved ref 'main' → 3666f989...
+Deploying commit 3666f989 to sandbox...
+Using manifest e8cc7d59...
+
+Deployment submitted.
+  Release ID:  rel_xxx
+  Environment: sandbox
+  Status:      ready (1/1 ready)
+```
+
+## 8. Verify
+
+Your app is live. The URL follows this pattern:
+
+```
+https://api.{orgSlug}-{projectSlug}-sandbox.eh1.incept5.dev
+```
+
+Test it:
 
 ```bash
-eve project ensure --name "My Project" --slug myproj \
-  --repo-url git@github.com:yourorg/my-project.git --branch main
+curl https://api.myco-myapp-sandbox.eh1.incept5.dev/health
+# {"status":"ok"}
 ```
 
-## 3. Create your first job
-
-A job is the fundamental unit of work in Eve. Create one with a natural-language description:
+The starter template includes a todos API and a simple HTML frontend. Try it out:
 
 ```bash
-eve job create --description "Review the codebase and suggest improvements"
+# List todos (empty at first)
+curl https://api.myco-myapp-sandbox.eh1.incept5.dev/todos
+
+# Create one
+curl -X POST https://api.myco-myapp-sandbox.eh1.incept5.dev/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello from Eve"}'
 ```
 
-The CLI returns a job ID:
+Open the root URL in a browser to see the frontend.
 
-```
-Created myproj-a3f2dd12
-Phase: ready
-Priority: 2
-```
+## What's in the box
 
-The job is now in the `ready` phase, waiting for the orchestrator to pick it up.
+The starter template gives you a working app with Eve's full deployment toolchain:
 
-## 4. Watch the execution
-
-Follow the job logs in real time as the agent works:
-
-```bash
-eve job follow myproj-a3f2dd12
-```
-
-You will see a live stream of the agent's actions — reading files, running tools, and producing output. The stream ends when the job completes.
-
-If you prefer to wait silently:
-
-```bash
-eve job wait myproj-a3f2dd12 --timeout 120
-```
-
-This blocks until the job finishes, with exit code `0` for success, `1` for failure, or `124` for timeout.
-
-## 5. Check the result
-
-Once the job completes, retrieve the result:
-
-```bash
-eve job result myproj-a3f2dd12
-```
-
-For specific output formats:
-
-```bash
-# Plain text output only
-eve job result myproj-a3f2dd12 --format text
-
-# Full JSON structure
-eve job result myproj-a3f2dd12 --format json
-```
-
-View the full job details including phase, timing, and attempt history:
-
-```bash
-eve job show myproj-a3f2dd12
-```
+| Path | What it does |
+|------|-------------|
+| `apps/api/` | Node.js API — todos CRUD, health check, OpenAPI spec, static file serving |
+| `.eve/manifest.yaml` | Services, environments, pipelines, and agent configuration |
+| `agents/` | Agent definitions, team composition, and chat routing |
+| `skills/` | 24 pre-installed skills across 39 agent configurations |
+| `docker-compose.yml` | Local development setup |
 
 ## What just happened?
 
-Here is the sequence of events behind that single `eve job create` command:
-
-1. **Job created** — The CLI sent a `POST` request to the API, which stored the job in Postgres with phase `ready` and priority `2`.
-
-2. **Orchestrator claimed the job** — The orchestrator polls for ready jobs every few seconds. It claimed yours, created a `JobAttempt`, and routed it to an available worker.
-
-3. **Worker prepared the workspace** — The worker cloned your repository into an isolated workspace. It ran the post-clone hook to install skills from `skills.txt`.
-
-4. **Agent executed** — The worker spawned an agent harness (by default, `mclaude` for Claude Code). The harness loaded the skill instructions from `.agents/skills/` and executed them against your code.
-
-5. **Result stored** — When the agent finished, the worker captured the result, execution logs, and a cost receipt (token usage and timing). The job phase transitioned to `done`.
-
-6. **You retrieved the result** — The `eve job result` command fetched the stored result from the API.
-
 ```mermaid
 graph LR
-    A["eve job create"] --> B["API stores job"]
-    B --> C["Orchestrator claims"]
-    C --> D["Worker clones repo"]
-    D --> E["Agent executes skill"]
-    E --> F["Result stored"]
-    F --> G["eve job result"]
+  Sync["eve project sync"] --> Build["Build image"]
+  Build --> Release["Create release"]
+  Release --> Deploy["Deploy to K8s"]
+  Deploy --> Live["App is live"]
 ```
 
-Every step is tracked and auditable. You can inspect attempt logs, compare multiple attempts, and view execution receipts with cost breakdowns.
+1. **Sync** pushed your manifest to the platform — services, pipelines, environments
+2. **Build** cloned your repo and built a container image from the Dockerfile
+3. **Release** created a versioned release artifact tied to your Git SHA
+4. **Deploy** rolled out the release to the sandbox environment on Kubernetes
 
-## Useful commands
+Every subsequent deploy follows the same flow. Push code, sync if the manifest changed, and deploy again.
 
-| Command | Description |
-|---------|-------------|
-| `eve job list` | List jobs in your project |
-| `eve job list --phase active` | Filter by phase |
-| `eve job show <id>` | Full job details |
-| `eve job follow <id>` | Stream logs in real time |
-| `eve job wait <id>` | Wait for completion |
-| `eve job result <id>` | Get the result |
-| `eve auth status` | Check authentication |
-| `eve system health` | Verify platform connectivity |
+## Key commands
+
+```bash
+# Re-deploy after code changes
+eve env deploy sandbox --ref main
+
+# Sync manifest after changing it
+eve project sync
+
+# Check environment health
+eve env health proj_xxx sandbox
+
+# View deploy logs
+eve env logs proj_xxx sandbox
+
+# Run locally
+cd apps/api && npm start
+```
 
 ## Next steps
 
-You have created and run your first job. To understand the building blocks of the platform — jobs, skills, pipelines, events, and more — continue to Core Concepts.
+You have a deployed app. Now hand it to your agents.
 
-[Core Concepts →](./core-concepts.md)
+- **Create a job** — `eve job create --description "Add a dark mode toggle to the frontend"` — and let agents write the code
+- **[Core Concepts](./core-concepts.md)** — understand jobs, skills, pipelines, events, and agents
+- **[Your First Deploy](./first-deploy.md)** — customize the manifest with managed databases, secrets, and multi-service setups
+- **[eve-quickstart repo](https://github.com/eve-horizon/eve-quickstart)** — the companion repo built alongside this guide, with every step verified
