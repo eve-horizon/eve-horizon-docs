@@ -18,35 +18,30 @@ Your AI coding agent (Claude Code, Cursor, Codex, etc.) handles the code. These 
 
 ## 1. Get access
 
-You need an account on the Eve platform before you can do anything.
-
-**If an admin is onboarding you** — ask them to run:
-
-```bash
-eve admin invite --email you@example.com --ssh-key ~/.ssh/id_ed25519.pub
-```
-
-Admins can also invite using a GitHub username and let Eve fetch SSH keys automatically:
-
-```bash
-eve admin invite --email you@example.com --github octocat
-```
-
-**If you're requesting access yourself:**
+You need an account on the Eve platform before you can do anything. Request access with your SSH key:
 
 ```bash
 eve auth request-access \
   --org "Your Org" \
-  --ssh-key ~/.ssh/id_ed25519.pub \
   --email you@example.com \
+  --ssh-key ~/.ssh/id_ed25519.pub \
   --wait
 ```
 
-This submits a request and polls until an admin approves it. The admin approves with:
+The `--wait` flag polls until an admin approves your request, then logs you in automatically. You can also check status manually:
 
 ```bash
-eve admin access-requests approve <request-id>
+eve auth request-access --status <request-id>
 ```
+
+:::tip Admin onboarding
+If an admin is setting you up directly, they can skip the request flow:
+```bash
+eve admin invite --email you@example.com --ssh-key ~/.ssh/id_ed25519.pub
+# Or let Eve fetch keys from GitHub:
+eve admin invite --email you@example.com --github octocat
+```
+:::
 
 ## 2. Log in
 
