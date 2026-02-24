@@ -64,23 +64,22 @@ workflows:
 
             ## Workspace
             You are running in an Eve job. Your cwd is the evdocs project repo.
-            Source access is via the GitHub API — no clone needed.
+            Source access is via the GitHub API using Node.js fetch() — no clone needed.
+            GITHUB_TOKEN is available as process.env.GITHUB_TOKEN for authenticated API calls.
+            The worker may not have gh, curl, or jq — use Node.js for all HTTP calls.
 
             ## Setup
-            1. Authenticate gh with the injected token:
-               ```bash
-               echo "${GITHUB_TOKEN}" | gh auth login --with-token
-               ```
-            2. Load the sync-docs skill from private-skills/sync-docs/
+            1. Read the sync-docs skill from private-skills/sync-docs/SKILL.md
+            2. Verify GitHub API access per the skill's Phase 1 instructions
 
             ## Execute
-            3. Run the full sync workflow defined in the skill
+            3. Run the full sync workflow defined in the skill (all 5 phases)
             4. The skill will:
                - Read .sync-state.json to find the last synced commit
-               - Call gh api repos/incept5/eve-horizon/compare/<last>...main
-                 to discover what changed (commits, files, patches)
+               - Use Node.js fetch() to call GitHub Compare API
+               - Cross-reference changes with .sync-map.json
                - Update affected docs pages (human-readable documentation)
-               - Read full source files via gh api when patches are truncated
+               - Fetch full source files via Contents API when patches are truncated
                - Update .sync-state.json with the new commit hash
             5. If there are no changes, report that docs are up to date
             6. If there are changes, they will be committed and pushed
