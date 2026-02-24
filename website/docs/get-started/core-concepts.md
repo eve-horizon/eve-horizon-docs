@@ -101,12 +101,64 @@ To review a pull request:
 3. Post a structured review with actionable feedback
 ```
 
-Skills are installed from **skill packs** — repositories or local directories listed in `skills.txt` or configured under `x-eve.packs` in the manifest. Installation happens automatically when a worker clones your repo.
+Skills are installed from **skill packs** that are declared in two ways: `skills.txt` entries or `x-eve.packs` in `.eve/manifest.yaml`. The standard repository pattern is to keep pack sources in a root `skills.txt` and install them with `eve skills install`.
+
+### Standard skill flow
+
+Use this flow to keep local and remote skill sources in one place:
+
+```mermaid
+flowchart LR
+  A[skills.txt in repo root] --> B["eve skills install"]
+  B --> C[.agents/skills/]
+  B --> D[.claude/skills (symlink)]
+  E[Repo clone / job bootstrap] --> F[.eve/hooks/on-clone.sh]
+  F --> B
+  C --> G[Harness skill runtime]
+```
+
+```txt
+skills.txt
+
+./skillpacks/*                 # all in-repo packs and directories
+./skillpacks/eve-work/*        # team-local pack
+https://github.com/acme/custom-skills   # remote pack source
+```
 
 ```bash
-# Install skills from skills.txt
+# One-time bootstrap in the repo
+eve skills install
+
+# Keep periodic updates in sync with published packs
 eve skills install
 ```
+
+Add a small `on-clone` hook so all job runs install the same skills as your local workflow:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+if [ -x "./bin/eh" ]; then
+  ./bin/eh skills install
+else
+  eve skills install
+fi
+```
+
+`on-clone` runs this command automatically whenever a worker clones the repository, so CI and jobs see the same skill set as developers.
+
+:::note
+Do **not** commit `.agents/skills/` or `.claude/skills/`. They are generated artifacts and should be gitignored so they can be refreshed from source packs on demand.
+
+```gitignore
+.agents/skills/
+.claude/skills
+```
+
+When a published pack updates, rerun `eve skills install` to refresh local installs.
+:::
 
 ## Manifest
 

@@ -8,7 +8,7 @@ sidebar_position: 5
 
 Skills are portable instructions that tell agents how to perform specialized tasks. They follow Anthropic's SKILL.md format — a markdown file with frontmatter metadata and imperative instructions. Skill packs bundle related skills for distribution.
 
-Eve supports two installation paths: **AgentPacks** via `x-eve.packs` in the manifest (preferred) and the legacy `skills.txt` manifest. Both install skills into `.agents/skills/` where every harness can find them.
+Eve supports two installation paths: **AgentPacks** via `x-eve.packs` in the manifest (preferred) and a root `skills.txt` manifest. Most teams keep in-repo and remote pack sources in `skills.txt` and run `eve skills install`.
 
 ## What are skills?
 
@@ -44,6 +44,11 @@ your-repo/
 ```
 
 The key distinction: skill **sources** (under `skillpacks/` or in a remote repo) are tracked in version control. Skill **installations** (under `.agents/skills/`) are gitignored and regenerated on clone.
+
+```gitignore
+.agents/skills/
+.claude/skills
+```
 
 ## SKILL.md format
 
@@ -103,7 +108,7 @@ Resources keep the SKILL.md concise. An agent reads the skill instructions first
 
 ## Installing skills
 
-### Via skills.txt (legacy)
+### Via skills.txt (repo manifest)
 
 The `skills.txt` file lists one skill source per line. Sources can be local paths, Git URLs, or `org/repo` identifiers.
 
@@ -124,10 +129,11 @@ Always use explicit path prefixes (`./`, `../`, `/`, or `~`) for local paths. Ba
 Install with:
 
 ```bash
-./bin/eh skills install
+eve skills install
 ```
 
 This reads `skills.txt`, installs each source into `.agents/skills/`, and symlinks `.claude/skills` to `.agents/skills/` when possible.
+Re-run `eve skills install` periodically to refresh from updated published packs.
 
 ### Via AgentPacks (preferred)
 
@@ -156,6 +162,16 @@ Packs are resolved during `eve agents sync`, which reads the manifest, resolves 
 ### Automatic installation
 
 When a job runs, the worker clones the repository and executes `.eve/hooks/on-clone.sh`, which installs skills automatically. No manual installation is needed for CI/CD or agent job execution.
+
+Use this minimal hook to keep clone-time install behavior consistent for all jobs:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+eve skills install
+```
 
 ## Creating a custom skill
 
@@ -205,7 +221,7 @@ For `skills.txt`:
 
 ```bash
 echo './skillpacks/my-pack/*' >> skills.txt
-./bin/eh skills install
+eve skills install
 ```
 
 For AgentPacks, add the local source to your manifest:
@@ -266,7 +282,7 @@ mkdir -p skillpacks/team-standards/testing-conventions
 
 # Install all skills in the pack
 echo './skillpacks/team-standards/*' >> skills.txt
-./bin/eh skills install
+eve skills install
 ```
 
 ### Glob patterns in skills.txt
