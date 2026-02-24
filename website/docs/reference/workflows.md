@@ -199,7 +199,7 @@ workflows:
 | `trigger.github.event` | string | GitHub event type: `push` or `pull_request` |
 | `trigger.github.branch` | string | Branch filter for push events |
 | `trigger.github.base_branch` | string | Base branch filter for pull request events |
-| `trigger.github.action` | array<string> | Actions to match for pull request events |
+| `trigger.github.action` | `array<string>` | Actions to match for pull request events |
 | `trigger.system` | object | Optional system event trigger: `event` and optional `pipeline` |
 | `trigger.slack` | object | Optional Slack event filter (`event`, `channel`) |
 | `trigger.manual` | boolean | Set to `true` for manual-only invocation |
