@@ -1,0 +1,165 @@
+{
+  "docs_root": "website/docs",
+  "source_repo": "incept5/eve-horizon",
+  "watch_paths": [
+    "docs/system/",
+    "docs/ideas/agent-native-design.md",
+    "docs/ideas/platform-primitives-for-agentic-apps.md",
+    "packages/cli/src/commands/",
+    "AGENTS.md"
+  ],
+  "page_mappings": {
+    "get-started/core-concepts.md": {
+      "sources": ["AGENTS.md", "docs/system/manifest.md"],
+      "description": "Platform overview and key abstractions"
+    },
+    "get-started/what-is-eve-horizon.md": {
+      "sources": ["docs/system/system-overview.md", "AGENTS.md"],
+      "description": "Platform introduction and value proposition"
+    },
+    "get-started/install.md": {
+      "sources": ["docs/system/cli-tools-and-credentials.md"],
+      "description": "CLI installation instructions"
+    },
+    "get-started/quickstart.md": {
+      "sources": ["docs/system/manifest.md", "docs/system/deployment.md"],
+      "description": "First project setup walkthrough"
+    },
+    "get-started/first-deploy.md": {
+      "sources": ["docs/system/deployment.md", "docs/system/builds.md"],
+      "description": "Deploy to staging guide"
+    },
+    "guides/manifest-authoring.md": {
+      "sources": ["docs/system/manifest.md"],
+      "description": "Manifest file authoring guide"
+    },
+    "guides/services-and-databases.md": {
+      "sources": ["docs/system/manifest.md", "docs/system/deployment.md"],
+      "description": "Service and database configuration"
+    },
+    "guides/pipelines.md": {
+      "sources": ["docs/system/pipelines.md", "docs/system/workflows.md"],
+      "description": "Pipeline and workflow setup"
+    },
+    "guides/environments.md": {
+      "sources": ["docs/system/deployment.md", "docs/system/deploy-polling.md"],
+      "description": "Environment management"
+    },
+    "guides/skills.md": {
+      "sources": ["docs/system/skills.md", "docs/system/skillpacks.md", "docs/system/skills-manifest.md"],
+      "description": "Skills authoring and management"
+    },
+    "guides/agents-and-teams.md": {
+      "sources": ["docs/system/agents.md", "AGENTS.md"],
+      "description": "Agent and team configuration"
+    },
+    "guides/chat.md": {
+      "sources": ["docs/system/chat-routing.md", "docs/system/chat-gateway.md"],
+      "description": "Chat routing and gateway"
+    },
+    "guides/local-development.md": {
+      "sources": ["docs/system/cli-debugging.md", "docs/system/k8s-local-stack.md"],
+      "description": "Local dev loop"
+    },
+    "guides/agentic-app-design.md": {
+      "sources": ["docs/ideas/agent-native-design.md", "docs/ideas/platform-primitives-for-agentic-apps.md"],
+      "description": "Designing agentic applications"
+    },
+    "guides/fullstack-app-design.md": {
+      "sources": ["docs/system/manifest.md", "docs/system/deployment.md", "docs/system/unified-architecture.md"],
+      "description": "Full-stack application architecture"
+    },
+    "guides/secrets-and-auth.md": {
+      "sources": ["docs/system/secrets.md", "docs/system/auth.md", "docs/system/identity-providers.md"],
+      "description": "Secrets and authentication"
+    },
+    "reference/cli-commands.md": {
+      "sources": ["packages/cli/src/commands/"],
+      "description": "CLI command reference"
+    },
+    "reference/cli-appendix.md": {
+      "sources": ["packages/cli/src/commands/"],
+      "description": "CLI detailed appendix"
+    },
+    "reference/manifest-schema.md": {
+      "sources": ["docs/system/manifest.md"],
+      "description": "Manifest schema reference"
+    },
+    "reference/job-api.md": {
+      "sources": ["docs/system/job-api.md", "docs/system/job-context.md", "docs/system/job-control-signals.md"],
+      "description": "Job API reference"
+    },
+    "reference/events-and-webhooks.md": {
+      "sources": ["docs/system/events.md", "docs/system/webhooks.md"],
+      "description": "Events and webhooks reference"
+    },
+    "reference/builds-and-releases.md": {
+      "sources": ["docs/system/builds.md", "docs/system/container-registry.md"],
+      "description": "Build system reference"
+    },
+    "reference/pipelines.md": {
+      "sources": ["docs/system/pipelines.md"],
+      "description": "Pipeline reference"
+    },
+    "reference/workflows.md": {
+      "sources": ["docs/system/workflows.md", "docs/system/workflow-invocation.md"],
+      "description": "Workflow reference"
+    },
+    "reference/environment-gating.md": {
+      "sources": ["docs/system/environment-gating.md", "docs/system/deployment.md"],
+      "description": "Environment gating reference"
+    },
+    "reference/harnesses-and-workers.md": {
+      "sources": ["docs/system/harness-execution.md", "docs/system/harness-adapters.md", "docs/system/harness-policy.md"],
+      "description": "Harness and worker reference"
+    },
+    "reference/openapi.md": {
+      "sources": [],
+      "description": "OpenAPI spec (generated, not synced)"
+    },
+    "agent-integration/agent-native-design.md": {
+      "sources": ["docs/ideas/agent-native-design.md", "docs/ideas/platform-primitives-for-agentic-apps.md"],
+      "description": "Agent-native design philosophy"
+    },
+    "agent-integration/skills-system.md": {
+      "sources": ["docs/system/skills.md", "docs/system/skillpacks.md", "docs/system/skills-workflows.md"],
+      "description": "Skills system deep dive"
+    },
+    "agent-integration/orchestration.md": {
+      "sources": ["docs/system/orchestrator.md", "docs/system/orchestration-skill.md", "docs/system/job-cli.md"],
+      "description": "Job orchestration patterns"
+    },
+    "agent-integration/chat-gateway.md": {
+      "sources": ["docs/system/chat-gateway.md"],
+      "description": "Chat gateway integration"
+    },
+    "agent-integration/threads.md": {
+      "sources": ["docs/system/threads.md", "docs/system/agents.md"],
+      "description": "Thread management"
+    },
+    "agent-integration/llms-txt.md": {
+      "sources": [],
+      "description": "llms.txt agent discovery (local to docs, not synced)"
+    },
+    "operations/deployment.md": {
+      "sources": ["docs/system/deployment.md", "docs/system/deploy-polling.md"],
+      "description": "Deployment operations"
+    },
+    "operations/observability.md": {
+      "sources": ["docs/system/observability.md", "docs/system/cli-debugging.md"],
+      "description": "Observability and logging"
+    },
+    "operations/database.md": {
+      "sources": ["docs/system/db.md", "docs/system/manifest.md"],
+      "description": "Database operations"
+    },
+    "operations/security.md": {
+      "sources": ["docs/system/auth.md", "docs/system/identity-providers.md"],
+      "description": "Security operations"
+    },
+    "operations/troubleshooting.md": {
+      "sources": ["docs/system/cli-debugging.md"],
+      "description": "Troubleshooting guide"
+    }
+  }
+}

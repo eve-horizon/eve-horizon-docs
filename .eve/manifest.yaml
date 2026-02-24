@@ -3,6 +3,11 @@ project: evdocs
 
 registry: "eve"
 
+x-eve:
+  defaults:
+    hints:
+      permission_policy: auto_edit
+
 services:
   docs:
     build:
@@ -40,3 +45,44 @@ pipelines:
       - name: deploy
         depends_on: [release]
         action: { type: deploy }
+
+workflows:
+  sync-docs:
+    trigger:
+      cron:
+        schedule: "0 9 * * *"
+    hints:
+      permission_policy: auto_edit
+    git:
+      ref: main
+      commit: auto
+      push: on_success
+    steps:
+      - agent:
+          prompt: |
+            You are the eve-horizon-docs auto-sync agent.
+
+            ## Workspace
+            You are running in an Eve job. Your cwd is the evdocs project repo.
+            Source access is via the GitHub API — no clone needed.
+
+            ## Setup
+            1. Authenticate gh with the injected token:
+               ```bash
+               echo "${GITHUB_TOKEN}" | gh auth login --with-token
+               ```
+            2. Load the sync-docs skill from private-skills/sync-docs/
+
+            ## Execute
+            3. Run the full sync workflow defined in the skill
+            4. The skill will:
+               - Read .sync-state.json to find the last synced commit
+               - Call gh api repos/incept5/eve-horizon/compare/<last>...main
+                 to discover what changed (commits, files, patches)
+               - Update affected docs pages (human-readable documentation)
+               - Read full source files via gh api when patches are truncated
+               - Update .sync-state.json with the new commit hash
+            5. If there are no changes, report that docs are up to date
+            6. If there are changes, they will be committed and pushed
+               automatically by the job's git controls (commit: auto,
+               push: on_success)
