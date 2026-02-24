@@ -20,6 +20,17 @@ The orchestrator runs as a polling loop inside the API service. Each replica mai
 - **Apply** concurrency limits per orchestrator replica.
 - **Recover** stuck jobs via watchdog loops.
 
+## Agent runtime execution modes
+
+Eve can process jobs through warm, org-scoped runtimes or through normal runner pods.
+
+- `inline`: route to a warm runtime for low-latency chat and lightweight operations.
+- `runner`: execute in an ephemeral runner pod for full isolation.
+
+Configure with `EVE_AGENT_RUNTIME_EXECUTION_MODE`.
+
+Use `eve agents runtime-status` to inspect whether warm runtimes are active and check pool size.
+
 ### Concurrency control
 
 Each orchestrator replica dispatches up to `ORCH_CONCURRENCY` jobs in parallel (default: 4). Claims and dispatches are decoupled: each dispatch reserves a slot, and slots are released when dispatch completes or is force-recovered.

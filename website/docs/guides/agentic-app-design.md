@@ -389,10 +389,12 @@ Message kinds in coordination threads:
 
 ### Service accounts
 
-Backend services need non-user tokens for API calls. Use `eve auth mint` to create scoped tokens:
+Backend services need service-account identity for API calls. Create the account once, then mint a scoped token:
 
 ```bash
-eve auth mint --email app-bot@example.com --project proj_xxx --role admin
+eve auth create-service-account --org org_xxx --name "app-bot" --description "Backend API bot"
+eve auth list-service-accounts --org org_xxx
+eve auth mint --email <service-account-email> --org org_xxx
 ```
 
 Design each service account with minimal necessary scope. Every app with a backend talking to the Eve API needs this.

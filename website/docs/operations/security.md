@@ -29,7 +29,7 @@ graph TD
 
 The core principles:
 
-- **RS256 JWT tokens** for all internal authentication -- CLI, job tokens, service principals
+- **RS256 JWT tokens** for all internal authentication -- CLI, job tokens, service accounts
 - **SSH challenge-response** for passwordless CLI login
 - **Defense-in-depth agent isolation** -- three independent layers that must all be bypassed simultaneously
 - **Multi-scope secret management** -- secrets encrypted at rest, never returned in plaintext
@@ -41,7 +41,7 @@ Eve uses RS256 JWT tokens as the primary authentication mechanism. When Supabase
 
 | Token source | Algorithm | Use case |
 |--------------|-----------|----------|
-| **Eve internal** | RS256 | CLI, job tokens, service principals, SSH/Nostr identity flows |
+| **Eve internal** | RS256 | CLI, job tokens, service accounts, SSH/Nostr identity flows |
 | **Supabase Auth** | HS256 | Browser login and SSO-based user sessions |
 
 ### Token types
@@ -69,7 +69,7 @@ Eve uses RS256 JWT tokens as the primary authentication mechanism. When Supabase
 }
 ```
 
-**Service principal tokens** are RS256 JWTs with explicit scopes for application backends. They carry no implicit role expansion.
+**Service-account tokens** are RS256 JWTs with explicit scopes for application backends. They carry no implicit role expansion.
 
 ### JWKS endpoint
 
@@ -336,7 +336,7 @@ eve auth whoami
 
 ### Access groups
 
-Access groups provide fine-grained data-plane authorization. Groups contain users and service principals, and bindings can carry scoped access constraints.
+Access groups provide fine-grained data-plane authorization. Groups contain users and service accounts, and bindings can carry scoped access constraints.
 
 ```bash
 # Create a group
@@ -344,7 +344,7 @@ eve access groups create --org org_xxx --slug eng-team --name "Engineering Team"
 
 # Manage membership
 eve access groups members add eng-team --org org_xxx --user user_abc
-eve access groups members add eng-team --org org_xxx --service-principal sp_xxx
+eve access groups members add eng-team --org org_xxx --service-account sa_xxx
 eve access groups members list eng-team --org org_xxx
 eve access groups members remove eng-team --org org_xxx --user user_abc
 
@@ -409,8 +409,8 @@ access:
       members:
         - type: user
           id: user_abc
-        - type: service_principal
-          id: sp_xxx
+        - type: service_account
+          id: sa_xxx
     data-team:
       name: Data Analytics Team
       members:

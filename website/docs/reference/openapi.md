@@ -49,9 +49,9 @@ Tokens are RS256 JWTs issued by the Eve API. Public keys for verification are av
 
 | Method | Use case | How to obtain |
 |--------|----------|--------------|
-| **SSH challenge** | CLI login via GitHub identity | `eve login` triggers `POST /auth/challenge` then `POST /auth/verify` |
+| **SSH challenge** | CLI login via GitHub identity | `eve auth login` triggers `POST /auth/challenge` then `POST /auth/verify` |
 | **Supabase exchange** | Web UI login | `POST /auth/exchange` converts a Supabase token to an Eve token |
-| **Service principal** | CI/CD and automation | Create via `POST /orgs/{org_id}/service-principals`, mint tokens via the tokens sub-resource |
+| **Service account** | CI/CD and automation | Create via `POST /orgs/{org_id}/service-accounts`, mint tokens via the tokens sub-resource |
 | **Admin mint** | Admin tooling | `POST /auth/mint` (admin only) |
 
 ### Token types
@@ -59,7 +59,7 @@ Tokens are RS256 JWTs issued by the Eve API. Public keys for verification are av
 | Token type | Issued by | Scope |
 |------------|-----------|-------|
 | **User token** | SSH challenge or Supabase exchange | Full user permissions based on org/project membership |
-| **Service principal token** | Service principal token endpoint | Scoped to org with configurable permissions |
+| **Service account token** | Service account token endpoint | Scoped to org/project with configurable permissions |
 | **Job token** | Internal mint (orchestrator) | Scoped to a specific job with explicit permission list |
 
 ## Base URL and discovery
@@ -203,7 +203,7 @@ The API is organized into the following resource groups.
 
 | Endpoint pattern | Purpose |
 |-----------------|---------|
-| `/orgs/{org_id}/service-principals` | Service principal CRUD and token minting |
+| `/orgs/{org_id}/service-accounts` | Service account CRUD and token minting |
 | `/orgs/{org_id}/access/can` | Permission check |
 | `/orgs/{org_id}/access/explain` | Permission resolution explanation |
 | `/orgs/{org_id}/access/roles` | Custom role management |
@@ -372,14 +372,14 @@ Applications deployed on Eve can access the Eve API using job tokens. The orches
 
 Job tokens are injected into the execution environment and are scoped to the specific job's permissions. See the [Job API](/docs/reference/job-api) reference for details on job token scope and usage.
 
-Service principals provide long-lived API access for CI/CD pipelines and automation. Create a service principal via the API or CLI, mint a token, and use it as a Bearer token:
+Service accounts provide long-lived API access for CI/CD pipelines and automation. Create a service account via the API or CLI, mint a token, and use it as a Bearer token:
 
 ```bash
-# Create a service principal for CI
-eve service-principal create --org org_xxx --name "ci-pipeline"
+# Create a service account for CI
+eve auth create-service-account --org org_xxx --name "ci-pipeline"
 
-# Mint a token
-eve service-principal mint-token --org org_xxx --sp sp_yyy
+# Mint a token for that account
+eve auth mint --org org_xxx --service-account-id sa_yyy
 ```
 
 ## CLI commands

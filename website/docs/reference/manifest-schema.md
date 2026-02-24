@@ -141,10 +141,11 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 | `ingress.public` | `boolean` | Enable public ingress (default: `true` when ports are exposed) |
 | `ingress.port` | `number` | Port to route traffic to |
 | `ingress.alias` | `string` | Custom subdomain alias (3-63 chars, lowercase alphanumeric + hyphens) |
+| `ingress.domain` | `string` | Override domain used for ingress hostname generation |
 | `api_spec` | `object` | Single API spec registration |
 | `api_specs` | `array<ApiSpec>` | Multiple API spec registrations |
 | `external` | `boolean` | If `true`, service is not deployed (external dependency) |
-| `connection_url` | `string` | Connection string for external services |
+| `url` | `string` | Connection string for external services |
 | `worker_type` | `string` | Worker pool type for worker-role services |
 | `files` | `array<FileMount>` | Mount repo files into the container |
 | `storage` | `object` | Persistent volume configuration |
@@ -163,13 +164,15 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 x-eve:
   api_spec:
     type: openapi       # openapi | postgrest | graphql
-    spec_url: /openapi.json
+    spec_path: /app/openapi.json
+    # or spec_url: /openapi.json
     on_deploy: true      # refresh spec after each deploy (default: true)
     auth: eve            # eve | none (default: eve)
     name: my-api         # optional display name
 ```
 
 `spec_url` may be relative (resolved against the service URL) or absolute.
+`spec_path` is resolved against the container filesystem.
 
 ### File Mounts
 
@@ -185,6 +188,7 @@ x-eve:
 ```yaml
 x-eve:
   storage:
+    name: app-data
     mount_path: /data
     size: 10Gi
     access_mode: ReadWriteOnce    # ReadWriteOnce | ReadWriteMany | ReadOnlyMany
@@ -240,6 +244,9 @@ environments:
 | `pipeline` | `string` | Pipeline to run when deploying this environment |
 | `pipeline_inputs` | `map<string, any>` | Default inputs for the pipeline run (merged with CLI `--inputs`, CLI wins) |
 | `approval` | `string` | Set to `required` to gate deploy and job steps |
+| `type` | `string` | Environment lifecycle: `persistent` or `temporary` |
+| `kind` | `string` | Environment taxonomy: `standard` or `preview` |
+| `labels` | `array<string>` | Metadata labels for filtering and UIs |
 | `overrides` | `object` | Compose-style service overrides for this environment |
 | `overrides.services` | `map<string, Service>` | Per-service environment/config overrides |
 | `workers` | `array<object>` | Worker pool selection for this environment |
@@ -280,6 +287,79 @@ eve env deploy staging --ref <sha> --inputs '{"release_id":"rel_xxx"}'
 # Promote to production (approval gate)
 eve env deploy production --ref <sha> --inputs '{"release_id":"rel_xxx"}'
 ```
+
+## Triggers
+
+Pipelines and workflows can be triggered automatically via events from GitHub, Slack, the system, or cron schedules.
+
+Triggers are declared under:
+
+- `pipelines.<name>.trigger`
+- `workflows.<name>.trigger`
+
+### GitHub push trigger
+
+```yaml
+pipelines:
+  ci-cd-main:
+    trigger:
+      github:
+        event: push
+        branch: main
+```
+
+### GitHub pull request trigger
+
+```yaml
+pipelines:
+  ci-cd-main:
+    trigger:
+      github:
+        event: pull_request
+        action: [opened, synchronize, reopened]
+        base_branch: main
+```
+
+### Slack trigger
+
+```yaml
+workflows:
+  support:
+    trigger:
+      slack:
+        event: app_mention
+        channel: C123ABC
+```
+
+### System trigger
+
+```yaml
+pipelines:
+  remediation:
+    trigger:
+      system:
+        event: job.failed
+        pipeline: deploy
+```
+
+### Cron and manual triggers
+
+```yaml
+workflows:
+  log-audit:
+    trigger:
+      cron:
+        schedule: "0 */6 * * *"
+```
+
+```yaml
+workflows:
+  manual-release:
+    trigger:
+      manual: true
+```
+
+Use these rules on both pipelines and workflows when you want automation, remediation, or scheduled maintenance.
 
 ---
 
@@ -323,6 +403,8 @@ Each step is one of the following:
 | `name` | `string` | Step identifier (unique within pipeline) |
 | `depends_on` | `array<string>` | Step names that must complete before this step runs |
 | `action` | `object` | Built-in action configuration |
+| `action.type` | `string` | Built-in action name (`build`, `release`, `deploy`, `run`, `job`, `create-pr`, `notify`, `env-ensure`, `env-delete`) |
+| `action.with` | `object` | Action-specific parameters |
 | `script` | `object` | Script execution (`run`, `command`, `timeout`) |
 | `agent` | `object` | AI agent job (`prompt`, optional config) |
 | `run` | `string` | Shorthand for `script.run` |
@@ -339,17 +421,34 @@ Each step is one of the following:
 | `run` | Run a one-off container |
 | `job` | Execute a service marked as `role: job` (e.g., migrations) |
 | `create-pr` | Create a pull request from job changes |
+| `notify` | Send a notification when the step completes |
+| `env-ensure` | Ensure an environment exists and is ready |
+| `env-delete` | Delete a managed environment and optional resources |
+
+### Action input fields
+
+| Action | Key | Purpose |
+|--------|-----|---------|
+| `deploy` | `env_name` | Target environment for the deployment |
+| `job` | `service` | Run a `x-eve.role: job` service |
+| `create-pr` | `title`, `body`, `branch` | PR metadata |
+| `notify` | `channel`, `message` | Notification destination and message |
+| `env-ensure` | `env_name`, `kind` | Create environment if missing (`standard` or `preview`) |
+| `env-delete` | `env_name` | Delete environment |
 
 ---
 
 ## Workflows
 
 Workflows are manifest-defined jobs stored and returned as-is. The platform extracts `db_access` when present.
+Use the optional `hints` block to set workflow-level defaults (for example timeout, worker type, or gates).
 
 ```yaml
 workflows:
   nightly-audit:
     db_access: read_only
+    hints:
+      worker_type: default-worker
     steps:
       - agent:
           prompt: "Audit errors and summarize anomalies"
@@ -405,11 +504,12 @@ Default settings for jobs created in this project. Merged on job creation; expli
 x-eve:
   defaults:
     env: staging
-    harness: mclaude
-    harness_profile: primary-orchestrator
-    harness_options:
-      model: opus-4.5
-      reasoning_effort: high
+    harness_preference:
+      harness: mclaude
+      profile: primary-orchestrator
+      options:
+        model: opus-4.5
+        reasoning_effort: high
     hints:
       permission_policy: auto_edit
       resource_class: job.c1
@@ -430,12 +530,18 @@ x-eve:
 | Field | Type | Description |
 |-------|------|-------------|
 | `env` | `string` | Default target environment for jobs |
-| `harness` | `string` | Default harness (e.g., `mclaude`) |
-| `harness_profile` | `string` | Default profile from `x-eve.agents` |
-| `harness_options` | `object` | Model, reasoning effort, and variant overrides |
-| `hints` | `object` | Scheduling hints: `permission_policy`, `resource_class`, `max_cost`, `max_tokens` |
+| `harness_preference` | `object` | Preferred harness defaults; replaces legacy `harness` / `harness_profile` / `harness_options` |
+| `harness` | `string` | **Deprecated**. Use `harness_preference.harness`. |
+| `harness_profile` | `string` | **Deprecated**. Use `harness_preference.profile`. |
+| `harness_options` | `object` | **Deprecated**. Use `harness_preference.options`. |
+| `hints` | `object` | **Deprecated**. Legacy job-hints fields retained for compatibility. |
 | `git` | `object` | Default git controls (see [Job API -- Git Controls](/docs/reference/job-api#git-controls)) |
 | `workspace` | `object` | Default workspace configuration |
+
+:::warning Deprecation
+`harness`, `harness_profile`, and `harness_options` are legacy fields and map to `harness_preference`.
+`hints` at this level is also legacy; prefer inline profile preferences or explicit agent-level hints.
+:::
 
 ---
 
@@ -471,6 +577,18 @@ Each profile is an ordered array of harness/model candidates. The orchestrator s
 
 The manifest sync API returns parsed agent config as `parsed_agents`, consumed by orchestrators via `eve agents config`.
 
+### Pack overlay removals
+
+Use `_remove: true` in an override object to drop a value introduced by a pack:
+
+```yaml
+agents:
+  stale-pack-agent:
+    _remove: true
+```
+
+This keeps a local manifest authoritative by explicitly removing inherited values instead of silently merging.
+
 ---
 
 ## `x-eve.packs`
@@ -489,6 +607,7 @@ x-eve:
     # Remote pack (ref required for remote sources)
     - source: incept5/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
+      packs: [eve-work, eve-se]
 
     # Per-pack agent override
     - source: ./skillpacks/claude-only
@@ -499,7 +618,10 @@ x-eve:
 |-------|------|-------------|
 | `source` | `string` | Local path, `owner/repo`, `github:owner/repo`, or git URL |
 | `ref` | `string` | 40-character SHA (required for remote sources) |
+| `packs` | `array<string>` | Optional subset of remote pack namespaces to install |
 | `install_agents` | `array<string>` | Override which agents receive this pack's skills |
+
+Pack refs and subset filters follow the same form shown above: `source` identifies the pack source, `ref` pins the version, and optional `packs` limits which named pack groups are installed.
 
 Packs are resolved by `eve agents sync` and locked in `.eve/packs.lock.yaml`. Use `eve packs status` to check lockfile state and drift.
 
@@ -582,6 +704,7 @@ Environment values support variable interpolation for deploy-time context:
 | `${PROJECT_ID}` | Project ID |
 | `${ORG_ID}` | Organization ID |
 | `${COMPONENT_NAME}` | Service/component name |
+| `${ORG_SLUG}` | Organization slug |
 
 Example:
 
@@ -599,7 +722,7 @@ When a service depends on a managed database, reference provisioned values with 
 
 ```yaml
 environment:
-  DATABASE_URL: ${managed.db.connection_url}
+  DATABASE_URL: ${managed.db.url}
 ```
 
 These placeholders are resolved at deploy time once the managed database is provisioned.

@@ -128,7 +128,13 @@ AgentPacks are the recommended approach. Declare packs in `.eve/manifest.yaml` u
 ```yaml
 x-eve:
   packs:
+    # Remote pack (full repo)
     - source: github.com/incept5/eve-skillpacks
+      ref: 0123456789abcdef0123456789abcdef01234567
+
+    # Remote pack (subset + pins)
+    - source: github.com/incept5/eve-skillpacks
+      ref: 0123456789abcdef0123456789abcdef01234567
       packs: [eve-work, eve-se]
 ```
 

@@ -230,7 +230,7 @@ If a deployment introduces issues, you can redeploy a known-good release:
 eve release list --project proj_xxx
 
 # Deploy a specific release tag
-eve env deploy staging --ref <known-good-sha> --direct
+eve env rollback staging --release rel_xxx
 ```
 
 For pipeline-driven rollbacks, you can promote a previous release:
@@ -241,6 +241,48 @@ eve release resolve v1.1.0
 
 # Deploy that release to the target environment
 eve env deploy production --ref <sha> --inputs '{"release_id":"rel_xxx"}'
+```
+
+## Environment lifecycle controls
+
+Use environment lifecycle commands to manage non-running states and emergency recovery:
+
+- **Suspend** an environment to block traffic quickly:
+
+```bash
+eve env suspend staging
+```
+
+- **Resume** from suspend without redeploying:
+
+```bash
+eve env resume staging
+```
+
+- **Check** current environment health and lock status:
+
+```bash
+eve env health <project> <env>
+eve env health <project> <env> --json
+```
+
+- **Recover** failed or stuck environments:
+
+```bash
+eve env recover <project> <env>
+```
+
+- **Rollback** to a specific release:
+
+```bash
+eve env rollback staging --release rel_xxx
+eve env rollback production --release rel_xxx --project proj_xxx
+```
+
+- **Reset** an environment from a clean state:
+
+```bash
+eve env reset <project> <env>
 ```
 
 ## Deployment monitoring
@@ -269,6 +311,27 @@ eve env diagnose <project> <env>
 # Quick health check
 eve system health
 ```
+
+### Environment logs
+
+Use `eve env logs` for service-level logs from an environment:
+
+```bash
+eve env logs <project> <env>
+eve env logs <project> <env> --since 10m --tail 200
+eve env logs <project> <env> --all-pods --grep "panic"
+eve env logs <project> <env> --pod api --container api --previous
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--since` | Time window (e.g., `5m`, `1h`) |
+| `--tail` | Number of lines to keep (default from API) |
+| `--grep` | Filter logs by text |
+| `--pod` | Target a specific pod |
+| `--container` | Target a specific container within a pod |
+| `--previous` | Include terminated previous container logs |
+| `--all-pods` | Include every pod in the environment |
 
 ## Debugging failed deploys
 
@@ -385,6 +448,12 @@ Docker Compose mode is for development only. It exposes services on localhost wi
 | `eve build diagnose <build-id>` | Build failure diagnostic |
 | `eve system health` | Quick platform health check |
 | `eve system logs <service>` | View platform service logs |
+| `eve env suspend <env>` | Temporarily block traffic to an environment |
+| `eve env resume <env>` | Restore a suspended environment |
+| `eve env health <project> <env>` | Inspect health and readiness state |
+| `eve env recover <project> <env>` | Recover a degraded or broken environment |
+| `eve env rollback <env> --release <id>` | Roll back to a previous release |
+| `eve env reset <project> <env>` | Recreate environment resources from scratch |
 | `eve release list --project <id>` | List releases for rollback |
 | `eve local up` | Start local k3d cluster |
 | `eve local health` | Check local cluster health |

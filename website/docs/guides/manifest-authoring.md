@@ -171,7 +171,7 @@ Every service can include an `x-eve` block (also accepted as `x_eve`) for Eve-sp
 | `api_spec` | Single API spec registration |
 | `api_specs` | Multiple API specs (array) |
 | `external` | If `true`, the service is not deployed (external dependency) |
-| `connection_url` | Connection string for external services |
+| `url` | Connection string for external services |
 | `worker_type` | Worker pool type for worker-role services |
 | `files` | Mount repository files into the container |
 | `storage` | Persistent volume configuration |
@@ -273,6 +273,7 @@ Eve injects platform environment variables into all deployed services automatica
 | `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing apps |
 | `EVE_PROJECT_ID` | The project ID (e.g., `proj_01abc123`) |
 | `EVE_ORG_ID` | The organization ID (e.g., `org_01xyz789`) |
+| `EVE_ORG_SLUG` | The organization slug (e.g., `acme`) |
 | `EVE_ENV_NAME` | The environment name (e.g., `staging`) |
 
 You can reference these in your application code without declaring them in the manifest:
@@ -286,6 +287,59 @@ const publicApi = process.env.EVE_PUBLIC_API_URL;
 ```
 
 Services can override these values by defining them explicitly in their `environment` block.
+
+## Pipeline and workflow triggers
+
+Events can automatically trigger pipelines and workflows when their `trigger` blocks are present.
+
+### Pipeline triggers
+
+```yaml
+pipelines:
+  ci-cd-main:
+    trigger:
+      github:
+        event: push
+        branch: main
+```
+
+```yaml
+pipelines:
+  ci-cd-main:
+    trigger:
+      github:
+        event: pull_request
+        action: [opened, synchronize, reopened]
+        base_branch: main
+```
+
+```yaml
+pipelines:
+  remediation:
+    trigger:
+      system:
+        event: job.failed
+        pipeline: deploy
+```
+
+### Workflow triggers
+
+```yaml
+workflows:
+  log-audit:
+    trigger:
+      cron:
+        schedule: "0 0 * * *"
+```
+
+```yaml
+workflows:
+  manual-release:
+    trigger:
+      manual: true
+```
+
+Use these trigger blocks in your manifest to keep build, remediation, and scheduled ops declarative.
 
 ## Managed databases
 
@@ -319,11 +373,12 @@ The top-level `x-eve.defaults` block sets project-wide defaults for job executio
 x-eve:
   defaults:
     env: staging
-    harness: mclaude
-    harness_profile: primary-orchestrator
-    harness_options:
-      model: opus-4.5
-      reasoning_effort: high
+    harness_preference:
+      harness: mclaude
+      profile: primary-orchestrator
+      options:
+        model: opus-4.5
+        reasoning_effort: high
     hints:
       permission_policy: auto_edit
       resource_class: job.c1
@@ -342,6 +397,11 @@ x-eve:
 ```
 
 These defaults apply to all jobs in the project unless overridden at the job level.
+
+:::warning
+`harness_preference` replaces `harness`, `harness_profile`, and `harness_options` in `x-eve.defaults`.
+Legacy fields are still accepted but deprecated.
+:::
 
 ## Agent profiles (`x-eve.agents`)
 
@@ -399,6 +459,13 @@ x-eve:
 - Remote sources require `ref` as a 40-character git SHA.
 - Packs are resolved by [eve agents sync](/docs/reference/cli-appendix#eve-agents-sync) and locked in `.eve/packs.lock.yaml`.
 - Use `eve packs status` to check lockfile state and drift.
+- Use `_remove: true` to omit pack-provided entries in overlays:
+
+```yaml
+agents:
+  deprecated-pack-agent:
+    _remove: true
+```
 
 ## Validating your manifest
 
@@ -492,13 +559,18 @@ services:
         port: 80
 
   migrate:
-    image: flyway/flyway:10
-    command: -url=jdbc:postgresql://db:5432/app -user=app migrate
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
+    x-eve:
+      role: job
+      files:
+        - source: db/migrations
+          target: /migrations
     depends_on:
       db:
         condition: service_healthy
-    x-eve:
-      role: job
 
 environments:
   staging:
@@ -527,20 +599,22 @@ pipelines:
 ```yaml
 services:
   migrate:
-    image: flyway/flyway:10
-    command: >-
-      -url=jdbc:postgresql://db:5432/app
-      -user=app
-      -password=${secret.DB_PASSWORD}
-      -locations=filesystem:/migrations
-      migrate
-    volumes:
-      - ./db/migrations:/migrations:ro
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
+    x-eve:
+      role: job
+      files:
+        - source: db/migrations
+          target: /migrations
     depends_on:
       db:
         condition: service_healthy
-    x-eve:
-      role: job
+
+:::note
+If you already run migrations with Flyway or another migration engine, keep that approach as a BYO migration option.
+:::
 ```
 
 Services with `role: job` are runnable as one-off tasks (migrations, seed scripts). They don't run as long-lived deployments.
@@ -552,7 +626,7 @@ services:
   stripe:
     x-eve:
       external: true
-      connection_url: https://api.stripe.com
+      url: https://api.stripe.com
 ```
 
 External services are not deployed by Eve. They exist in the manifest so other services and the platform can reference them as dependencies.

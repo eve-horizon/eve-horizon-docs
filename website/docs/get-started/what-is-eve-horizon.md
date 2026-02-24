@@ -95,20 +95,23 @@ The software factory is one pattern, not a fixed pipeline. Each stage is an agen
 graph TD
   subgraph Interfaces
     CLI["eve CLI"]
-    GW["Chat Gateway"]
+    Slack["Slack"]
+    Nostr["Nostr"]
     Webhooks["GitHub Webhooks"]
+    Web["Web Chat"]
   end
 
   subgraph Platform
     API["API Gateway"]
     Events["Event Spine"]
+    Gateway["Gateway"]
     Orch["Orchestrator"]
+    SSO["SSO"]
   end
 
   subgraph Execution
     Worker["Worker"]
-    Harness["Agent Harness"]
-    Packs["Agent Packs"]
+    Runtime["Agent Runtime"]
   end
 
   subgraph Infrastructure
@@ -117,26 +120,31 @@ graph TD
   end
 
   CLI --> API
-  GW --> API
-  Webhooks --> Events
+  Slack --> Gateway
+  Nostr --> Gateway
+  Web --> Gateway
+  Webhooks --> Gateway
+  Gateway --> API
+  Gateway --> Events
   API --> Events
   Events --> Orch
   Orch --> Worker
-  Worker --> Harness
-  Harness --> Packs
-  API --> DB
+  Worker --> Runtime
+  Runtime --> Gateway
   Worker --> K8s
+  API --> SSO
+  API --> DB
 ```
 
 | Component | Role |
 |---|---|
-| **Chat Gateway** | Pluggable provider architecture — routes Slack, Nostr, and web chat messages to agents by slug or pattern-matching rules. |
 | **API Gateway** | REST API for all operations — projects, jobs, deployments, secrets, events. OpenAPI spec at `/docs`. |
+| **Gateway** | Normalizes Slack, Nostr, chat, and webhook inputs for orchestration and job routing. |
 | **Event Spine** | Central Postgres-backed bus that routes webhooks, messages, cron, and custom events into automation. |
 | **Orchestrator** | Claims ready jobs, routes events to triggers, drives the job and deployment lifecycle. |
-| **Worker** | Clones repos, spawns agent harnesses, captures logs and artifacts in isolated workspaces. |
-| **Agent Harness** | Adapts agents (Claude, Z.ai, Gemini, and others) to the execution model with skill loading and context injection. |
-| **Agent Packs** | Composable bundles of agents, skills, and team definitions — installed from registries or local repos via `x-eve.packs`. |
+| **Worker** | Clones repos, spawns workloads, captures logs and artifacts in isolated spaces. |
+| **Agent Runtime** | Executes agents and app-side orchestration logic for tasks and team workflows. |
+| **SSO** | Federates authentication providers and token exchange paths for platform services. |
 | **Postgres** | Single source of truth — jobs, events, secrets, logs, cost receipts. No hidden queues. |
 | **Kubernetes** | Primary runtime. Each job attempt and service runs in isolated pods with dedicated workspaces. |
 

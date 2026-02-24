@@ -184,7 +184,7 @@ routes:
 | Target | Behavior |
 |--------|----------|
 | `agent:<id>` | Dispatch to a single agent |
-| `team:<id>` | Dispatch using the team's configured mode (fanout, council, relay, single) |
+| `team:<id>` | Dispatch using the team's configured mode (fanout, council, relay) |
 | `workflow:<name>` | Invoke a named workflow |
 | `pipeline:<name>` | Launch a pipeline run |
 
@@ -293,7 +293,7 @@ eve thread post thr_xxx --body '{"kind":"directive","body":"focus on auth"}'
 eve thread follow thr_xxx
 ```
 
-`eve thread follow` polls every ~3 seconds using a `?since=` parameter — it is not SSE or WebSocket-based.
+`eve thread follow` uses SSE-style streaming (`/threads/{id}/follow`) for near-real-time updates.
 
 ### Message kinds
 

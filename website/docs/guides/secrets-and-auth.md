@@ -22,6 +22,8 @@ graph TD
 
 **Resolution order** (highest priority first): **project > user > org > system**.
 
+API scope resolution takes precedence. Local files are a fallback for convenience in local development.
+
 For example, if `GITHUB_TOKEN` is set at both the org and project level, the project value is used. System secrets provide a baseline for all orgs and projects.
 
 ## Setting secrets
@@ -109,11 +111,30 @@ secrets:
     DB_PASSWORD: ${REQUIRE_REAL_SECRET}  # Placeholder — set via API
 ```
 
-**Resolution order**: API secrets are overlaid by local `.eve/dev-secrets.yaml`. Local secrets take precedence for developer convenience. This lets you check in safe dev defaults while production environments use API-managed secrets.
+For local work, `.env` and `system-secrets.env.local` are available in addition to `.eve/dev-secrets.yaml`:
+
+- `.env` for process-level values used by local tooling and docker-compose services
+- `system-secrets.env.local` for host-level system secret defaults (local stacks)
+- `.eve/dev-secrets.yaml` for manifest interpolation overrides
+
+`.eve/dev-secrets.yaml` is usually sufficient for most local interpolation cases. The local files are read for local/runtime convenience and do not replace platform-managed resolution order.
 
 :::note
 For k8s deployments, `.eve/dev-secrets.yaml` only works when the project uses a `file://` repo URL and the worker has filesystem access to that path. For production k8s deployments, set secrets via the API instead.
 :::
+
+## Harness credentials
+
+Agent runtimes require provider secrets from this same project/org scope:
+
+| Harness | Required secret |
+|---------|-----------------|
+| `mclaude`, `claude`, `zai` | `ANTHROPIC_API_KEY` |
+| `code`, `coder` | `OPENAI_API_KEY` + `CODEX_AUTH_JSON_B64` |
+| `gemini` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
+| `zai` | `Z_AI_API_KEY` |
+
+These keys are expected by the platform bridges when those models are selected for jobs.
 
 ## Secret validation
 
@@ -154,7 +175,7 @@ Eve uses **RS256 JWT tokens** for authentication. When Supabase Auth is enabled,
 
 | Token source | Algorithm | Use case |
 |--------------|-----------|----------|
-| Eve internal | RS256 | CLI login, job tokens, service principals |
+| Eve internal | RS256 | CLI login, job tokens, service accounts |
 | Supabase Auth | HS256 | Browser login, SSO-based sessions |
 
 Eve supports pluggable identity providers. The auth guard implements a two-stage chain: Bearer JWT first, then provider-specific request auth.

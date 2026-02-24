@@ -133,10 +133,10 @@ Before syncing, verify that the manifest is well-formed:
 eve manifest validate
 ```
 
-This checks schema validity and reports missing required secrets. To also validate that all referenced secrets exist in the platform:
+This checks schema validity. To also validate that all referenced secrets exist in the platform:
 
 ```bash
-eve manifest validate --project proj_xxx
+eve manifest validate --validate-secrets --project proj_xxx
 ```
 
 ## 3. Sync the manifest
@@ -209,7 +209,7 @@ eve env deploy staging --ref main --repo-dir .
 
 The `--ref` flag accepts a branch name, tag, or 40-character SHA. When `--repo-dir` is provided, the CLI resolves the ref against your local repository.
 
-Because the `staging` environment is bound to the `deploy` pipeline in the manifest, this command triggers a full pipeline run — build, release, and deploy — rather than a direct deployment.
+In this manifest, `staging` is bound to the `deploy` pipeline, so this command runs the pipeline (`build -> release -> deploy`). If an environment has no `pipeline` binding, use `--direct` for direct deploy behavior.
 
 :::tip Direct deploy
 To bypass the pipeline and deploy directly (useful for debugging), add the `--direct` flag:

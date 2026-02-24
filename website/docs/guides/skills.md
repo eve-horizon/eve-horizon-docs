@@ -139,12 +139,17 @@ x-eve:
     # Local pack
     - source: ./skillpacks/my-pack
 
-    # Remote pack (ref required)
+    # Remote pack (ref required, full repo)
     - source: incept5/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
+
+    # Remote pack with subset (ref + packs)
+    - source: incept5/eve-skillpacks
+      ref: 0123456789abcdef0123456789abcdef01234567
+      packs: [eve-work, eve-se]
 ```
 
-Remote sources require a 40-character SHA in the `ref` field. This pins the pack to an exact commit, ensuring reproducible installs.
+Remote sources require a 40-character SHA in the `ref` field. Add `packs` to scope to selected packs in a repository.
 
 Packs are resolved during `eve agents sync`, which reads the manifest, resolves all pack sources, and writes `.eve/packs.lock.yaml`.
 
@@ -209,6 +214,9 @@ For AgentPacks, add the local source to your manifest:
 x-eve:
   packs:
     - source: ./skillpacks/my-pack
+    - source: incept5/eve-skillpacks
+      ref: 0123456789abcdef0123456789abcdef01234567
+      packs: [eve-work]
 ```
 
 ### Step 5 — Commit the source

@@ -270,6 +270,11 @@ workspace:
   key: "session:${session_id}"
 ```
 
+:::warning Not Yet Implemented
+Workspace reuse is not yet implemented. Today every attempt gets a fresh workspace.
+The `mode` and `key` fields are reserved for future use.
+:::
+
 ### Ref Resolution (`ref_policy`)
 
 | Policy | Behavior |
@@ -504,6 +509,18 @@ GET    /jobs/{job_id}/context                  Context + derived status
 GET    /jobs/{job_id}/dependencies             List dependencies
 POST   /jobs/{job_id}/dependencies             Add dependency
 DELETE /jobs/{job_id}/dependencies/{related}   Remove dependency
+```
+
+### Threads
+
+```bash
+GET    /orgs/{org_id}/threads                              List threads
+POST   /orgs/{org_id}/threads                              Create thread
+GET    /orgs/{org_id}/threads/{thread_id}                   Get thread details
+GET    /orgs/{org_id}/threads/{thread_id}/messages          List messages
+POST   /orgs/{org_id}/threads/{thread_id}/messages          Post message
+GET    /threads/{thread_id}/follow                           Stream messages (SSE)
+POST   /orgs/{org_id}/threads/{thread_id}/distill           Distill into org docs
 ```
 
 ### Claim, Release, Attempts

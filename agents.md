@@ -1,1 +1,1 @@
-See [`claude.md`](./claude.md) for contributor and agent instructions.
+See [`claude.md`](./CLAUDE.md) for contributor and agent instructions.

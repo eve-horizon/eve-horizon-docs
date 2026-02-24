@@ -46,9 +46,9 @@ Check if a principal can perform an action.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--org <org_id>` | string | Profile default | Org scope |
-| `--user <user_id>` | string | — | User to check (mutually exclusive with `--service-principal`/`--group`) |
-| `--service-principal <sp_id>` | string | — | Service principal to check (mutually exclusive with `--user`/`--group`) |
-| `--group <group_id>` | string | — | Group to check directly (mutually exclusive with `--user`/`--service-principal`) |
+| `--user <user_id>` | string | — | User to check (mutually exclusive with `--service-account`/`--group`) |
+| `--service-account <id>` | string | — | Service account to check (mutually exclusive with `--user`/`--group`) |
+| `--group <group_id>` | string | — | Group to check directly (mutually exclusive with `--user`/`--service-account`) |
 | `--permission <perm>` | string | — | Permission to check (e.g., `chat:write`, `jobs:admin`) |
 | `--project <project_id>` | string | — | Optional project scope for the check |
 | `--resource-type <type>` | string | — | Optional resource type: `orgfs`, `orgdocs`, `envdb` |
@@ -60,7 +60,7 @@ Check if a principal can perform an action.
 ```bash
 eve access can --org org_xxx --user user_abc --permission chat:write
 eve access can --org org_xxx --user user_abc --project proj_xxx --permission jobs:admin
-eve access can --org org_xxx --service-principal sp_xxx --permission jobs:read
+eve access can --org org_xxx --service-account sa_xxx --permission jobs:read
 eve access can --org org_xxx --user user_abc --permission orgfs:read \
   --resource-type orgfs --resource /groups/pm/spec.md --action read
 ```
@@ -72,8 +72,8 @@ Explain the permission resolution chain.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--org <org_id>` | string | Profile default | Org scope |
-| `--user <user_id>` | string | — | User to explain (mutually exclusive with `--service-principal`/`--group`) |
-| `--service-principal <sp_id>` | string | — | Service principal to explain |
+| `--user <user_id>` | string | — | User to explain (mutually exclusive with `--service-account`/`--group`) |
+| `--service-account <id>` | string | — | Service account to explain |
 | `--group <group_id>` | string | — | Group to explain directly |
 | `--permission <perm>` | string | — | Permission to explain |
 | `--project <project_id>` | string | — | Optional project scope |
@@ -86,7 +86,7 @@ Explain the permission resolution chain.
 ```bash
 eve access explain --org org_xxx --user user_abc --permission jobs:admin
 eve access explain --org org_xxx --user user_abc --project proj_xxx --permission jobs:admin
-eve access explain --org org_xxx --service-principal sp_xxx --permission jobs:read
+eve access explain --org org_xxx --service-account sa_xxx --permission jobs:read
 ```
 
 ### eve access groups {#eve-access-groups}
@@ -111,15 +111,94 @@ eve access groups members list pm-team --org org_xxx
 Inspect memberships, effective bindings, and effective scopes for a principal.
 
 ```
-eve access memberships --org <org_id> (--user <id>|--service-principal <id>|--group <id>)
+eve access memberships --org <org_id> (--user <id>|--service-account <id>|--group <id>)
 ```
 
 **Examples:**
 
 ```bash
 eve access memberships --org org_xxx --user user_abc
-eve access memberships --org org_xxx --service-principal sp_abc
+eve access memberships --org org_xxx --service-account sa_abc
 eve access memberships --org org_xxx --group grp_abc
+```
+
+### eve access roles {#eve-access-roles}
+
+List, create, or inspect platform roles.
+
+```
+eve access roles <list|show|create|update|delete> [--org <org_id>] [flags]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Scope organization |
+| `--name <name>` | string | — | Role name |
+| `--description <text>` | string | — | Human-readable role description |
+
+**Examples:**
+
+```bash
+eve access roles list --org org_xxx
+eve access roles create --org org_xxx --name reviewer --description "Can review jobs"
+eve access roles show reviewer --org org_xxx
+```
+
+### eve access bind {#eve-access-bind}
+
+Bind a role to a principal.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Target organization |
+| `--role <name>` | string | — | Role name |
+| `--user <user_id>` | string | — | Bind to a user |
+| `--service-account <id>` | string | — | Bind to a service account |
+| `--group <group_id>` | string | — | Bind to an access group |
+
+**Examples:**
+
+```bash
+eve access bind --org org_xxx --role reviewer --user user_abc
+eve access bind --org org_xxx --role ci-bot --service-account sa_xyz
+```
+
+### eve access unbind {#eve-access-unbind}
+
+Remove a principal-to-role binding.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Target organization |
+| `--role <name>` | string | — | Role name |
+| `--user <user_id>` | string | — | Unbind from user |
+| `--service-account <id>` | string | — | Unbind from service account |
+| `--group <group_id>` | string | — | Unbind from access group |
+
+**Examples:**
+
+```bash
+eve access unbind --org org_xxx --role reviewer --user user_abc
+eve access unbind --org org_xxx --role ci-bot --service-account sa_xyz
+```
+
+### eve access bindings {#eve-access-bindings}
+
+List effective and explicit bindings for a role or principal.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Target organization |
+| `--role <name>` | string | — | Optional role filter |
+| `--service-account <id>` | string | — | Optional principal filter |
+| `--user <id>` | string | — | Optional principal filter |
+| `--group <id>` | string | — | Optional principal filter |
+
+**Examples:**
+
+```bash
+eve access bindings --org org_xxx
+eve access bindings --org org_xxx --role reviewer
 ```
 
 ### eve access validate {#eve-access-validate}
@@ -222,6 +301,78 @@ Reclaim usage: `eve admin ingress-aliases reclaim <alias> --reason "<text>"`
 ```bash
 eve admin ingress-aliases list --project proj_xxx
 eve admin ingress-aliases reclaim eve-pm --reason "Reserved org rename"
+```
+
+### eve admin access-requests {#eve-admin-access-requests}
+
+List or act on pending self-service access requests.
+
+```
+eve admin access-requests <list|approve|reject> [request_id] [options]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Organization scope |
+| `--request-id <id>` | string | — | Request identifier for approve/reject |
+| `--limit <n>` | number | `20` | Max items |
+| `--offset <n>` | number | `0` | Page offset |
+| `--reason <text>` | string | — | Rejection reason |
+
+**Examples:**
+
+```bash
+eve admin access-requests list --org org_xxx
+eve admin access-requests approve req_xxx
+eve admin access-requests reject req_xxx --reason "Invalid identity proof"
+```
+
+### eve admin pricing {#eve-admin-pricing}
+
+View model pricing and exchange-rate settings (admin scope).
+
+```bash
+eve admin pricing [--org <org_id>]
+```
+
+### eve admin balance {#eve-admin-balance}
+
+Show organization or platform wallet balances (admin scope).
+
+```bash
+eve admin balance [--org <org_id>]
+```
+
+### eve admin usage {#eve-admin-usage}
+
+View usage statistics for billing and quota analysis (admin scope).
+
+```bash
+eve admin usage [--org <org_id>] [--window <duration>] [--json]
+```
+
+### eve admin receipts {#eve-admin-receipts}
+
+List or fetch billing receipts for an organization (admin scope).
+
+```bash
+eve admin receipts --org org_xxx [--limit <n>] [--offset <n>]
+```
+
+### eve admin models {#eve-admin-models}
+
+Manage platform model enablement and provider configuration.
+
+```bash
+eve admin models <list|enable|disable> [flags]
+```
+
+**Examples:**
+
+```bash
+eve admin models list
+eve admin models enable claude-3-7-sonnet
+eve admin models disable gpt-4.1-nano
 ```
 
 ---
@@ -556,6 +707,29 @@ Check authentication status.
 eve auth status
 ```
 
+### eve auth request-access {#eve-auth-request-access}
+
+Submit or check self-service access requests.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <id>` | string | Profile default | Organization to request access for |
+| `--email <email>` | string | — | Requesting user email |
+| `--ssh-key <path>` | string | `~/.ssh/id_ed25519.pub` | SSH public key for bootstrap |
+| `--nostr-pubkey <hex>` | string | — | Nostr identity key |
+| `--role <role>` | string | `member` | Requested organization role |
+| `--status <request_id>` | string | — | Poll request status (optional) |
+| `--wait` | boolean | `false` | Poll until request is processed |
+
+**Examples:**
+
+```bash
+eve auth request-access --org org_xxx --email you@example.com
+eve auth request-access --org org_xxx --ssh-key ~/.ssh/id_ed25519.pub
+eve auth request-access --org org_xxx --nostr-pubkey 9a...
+eve auth request-access --status req_xxx
+```
+
 ### eve auth whoami {#eve-auth-whoami}
 
 Show current user info.
@@ -600,6 +774,59 @@ eve auth mint --email app-bot@example.com --org org_xxx
 eve auth mint --email app-bot@example.com --project proj_xxx
 eve auth mint --email app-bot@example.com --project proj_xxx --role admin
 eve auth mint --email bot@example.com --org org_xxx --ttl 90
+```
+
+### eve auth create-service-account {#eve-auth-create-service-account}
+
+Create a service account for CI/CD automation.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | — | Organization for the service account |
+| `--name <name>` | string | — | Service account name |
+| `--role <role>` | string | `member` | Service account role |
+| `--description <text>` | string | — | Optional description |
+
+**Examples:**
+
+```bash
+eve auth create-service-account --org org_xxx --name "ci-bot"
+eve auth create-service-account --org org_xxx --name "release-bot" --role admin
+```
+
+### eve auth list-service-accounts {#eve-auth-list-service-accounts}
+
+List service accounts for an organization.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Organization to list from |
+| `--limit <n>` | number | `100` | Maximum rows |
+| `--offset <n>` | number | `0` | Paging offset |
+| `--include-disabled` | boolean | `false` | Include disabled service accounts |
+
+**Examples:**
+
+```bash
+eve auth list-service-accounts --org org_xxx
+eve auth list-service-accounts --org org_xxx --limit 20
+```
+
+### eve auth revoke-service-account {#eve-auth-revoke-service-account}
+
+Revoke and delete a service account.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Organization containing account |
+| `--service-account-id <id>` | string | — | Service account ID |
+| `--force` | boolean | `false` | Skip confirmation prompt |
+
+**Examples:**
+
+```bash
+eve auth revoke-service-account --org org_xxx --service-account-id sa_xxx
+eve auth revoke-service-account --service-account-id sa_xxx --force
 ```
 
 ### eve auth bootstrap {#eve-auth-bootstrap}
@@ -768,12 +995,14 @@ Show build logs.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--run <id>` | string | Latest | Specific run ID |
+| `--follow` | boolean | `false` | Stream logs in real time |
 
 **Examples:**
 
 ```bash
 eve build logs build_xxx
 eve build logs build_xxx --run brun_yyy
+eve build logs build_xxx --follow
 ```
 
 ### eve build artifacts {#eve-build-artifacts}
@@ -1120,6 +1349,53 @@ eve env create staging --type=persistent
 eve env create test --type=persistent --namespace=eve-test
 ```
 
+### eve env suspend {#eve-env-suspend}
+
+Suspend environment reconciliation and stop auto-deploys.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `<env>` | string | — | Environment name |
+| `--project <id>` | string | Profile default | Project ID |
+
+**Examples:**
+
+```bash
+eve env suspend staging
+```
+
+### eve env resume {#eve-env-resume}
+
+Resume a suspended environment.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `<env>` | string | — | Environment name |
+| `--project <id>` | string | Profile default | Project ID |
+
+**Examples:**
+
+```bash
+eve env resume staging
+```
+
+### eve env health {#eve-env-health}
+
+Check environment readiness status without logs.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `<project>` | string | — | Project ID or slug |
+| `<env>` | string | — | Environment name |
+| `--json` | boolean | `false` | Output machine-readable JSON |
+
+**Examples:**
+
+```bash
+eve env health proj_xxx staging
+eve env health proj_xxx staging --json
+```
+
 ### eve env deploy {#eve-env-deploy}
 
 Deploy to an environment.
@@ -1317,8 +1593,13 @@ Emit an event to trigger pipelines or notify other services.
 | `--type <type>` | string | — | Event type (e.g., `app.build.complete`) |
 | `--source <source>` | string | — | Event source (e.g., `app`, `ci`, `manual`) |
 | `--env <name>` | string | — | Environment name |
-| `--branch <branch>` | string | — | Git branch reference |
-| `--sha <sha>` | string | — | Git commit SHA |
+| `--ref-branch <branch>` | string | — | Git branch reference |
+| `--ref-sha <sha>` | string | — | Git commit SHA |
+| `--actor-type <type>` | string | `user` | Actor kind (`user`, `system`, `app`) |
+| `--actor-id <id>` | string | — | Actor identifier |
+| `--dedupe-key <key>` | string | — | Idempotency key for deduplicating events |
+| `--mutation-id <id>` | string | — | External mutation identifier |
+| `--request-id <id>` | string | — | Upstream request identifier |
 | `--payload <json>` | string | — | JSON payload with event data |
 
 **Examples:**
@@ -1326,7 +1607,7 @@ Emit an event to trigger pipelines or notify other services.
 ```bash
 eve event emit --project proj_xxx --type app.build.complete --source app
 eve event emit --project proj_xxx --type deploy.finished --source ci \
-  --env production --payload '{"version":"1.2.3"}'
+  --env production --ref-branch main --payload '{"version":"1.2.3"}'
 ```
 
 ---
@@ -1349,7 +1630,7 @@ eve fs sync <init|status|logs|pause|resume|disconnect|mode|conflicts|resolve|doc
 
 | Subcommand | Flags |
 |------------|-------|
-| `init` | `--org <id> --local <path> [--mode two-way\|push-only\|pull-only]` |
+| `init` | `--org <id> --local <path> [--mode two-way\|push-only\|pull-only] [--include <glob>] [--exclude <glob>] [--remote-path <path>] [--device-name <name>]` |
 | `status` | `--org <id>` |
 | `logs` | `--org <id> [--after <seq>] [--limit <n>] [--follow]` |
 | `pause` | `--org <id> [--link <link_id>]` |
@@ -1363,7 +1644,8 @@ eve fs sync <init|status|logs|pause|resume|disconnect|mode|conflicts|resolve|doc
 **Examples:**
 
 ```bash
-eve fs sync init --org org_xxx --local ~/Eve/acme --mode two-way
+eve fs sync init --org org_xxx --local ~/Eve/acme --mode two-way \
+  --include "docs/**" --exclude ".git/**" --device-name laptop-01
 eve fs sync status --org org_xxx
 eve fs sync logs --org org_xxx --follow
 eve fs sync mode --org org_xxx --set pull-only
@@ -1771,6 +2053,8 @@ Submit job for review.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--summary <text>` | string | — | Submission summary (required) |
+| `--status <status>` | string | `succeeded` | Submission status: `succeeded` or `failed` |
+| `--result-json <json>` | string | `none` | Optional structured result payload |
 | `--agent-id <id>` | string | `cli-user` | Agent ID |
 
 ### eve job approve {#eve-job-approve}
@@ -2191,6 +2475,14 @@ Manage a single target (add, rm, test).
 | `add` | `--name <name> --base-url <url> [--scope-kind <kind>] [--scope-id <id>] [--target-type <type>] [--transport-profile <profile>] [--api-key-ref <secret-ref>]` |
 | `rm` | `<target-id>` |
 | `test` | `<target-id>` |
+
+### eve ollama target wake {#eve-ollama-target-wake}
+
+Warm a target before first request.
+
+```bash
+eve ollama target wake <target_id>
+```
 
 ### eve ollama models {#eve-ollama-models}
 
@@ -3222,7 +3514,7 @@ eve thread post thr_xxx --body '{"kind":"directive","body":"focus on auth"}'
 
 ### eve thread follow {#eve-thread-follow}
 
-Follow a thread in real-time (polls every 3s).
+Follow a thread in real-time via SSE.
 
 ```bash
 eve thread follow thr_xxx
@@ -3451,4 +3743,74 @@ Show logs for a workflow job.
 
 ```bash
 eve workflow logs job_abc123
+```
+
+## eve providers {#eve-providers}
+
+Discover AI providers available to your org or project.
+
+```
+eve providers <subcommand> [options]
+```
+
+### eve providers list {#eve-providers-list}
+
+List providers available for current scope.
+
+```bash
+eve providers list
+eve providers list --org org_xxx --project proj_xxx
+```
+
+### eve providers show {#eve-providers-show}
+
+Show details for one provider.
+
+```bash
+eve providers show openai
+eve providers show openai --org org_xxx --json
+```
+
+### eve providers models {#eve-providers-models}
+
+List models exposed by a provider.
+
+```bash
+eve providers models openai
+eve providers models openai --org org_xxx
+```
+
+## eve models {#eve-models}
+
+Inspect available model aliases.
+
+```
+eve models <subcommand> [options]
+```
+
+### eve models list {#eve-models-list}
+
+List available model aliases.
+
+```bash
+eve models list
+eve models list --org org_xxx --project proj_xxx
+eve models list --json
+```
+
+## eve teams {#eve-teams}
+
+Worker team management.
+
+```
+eve teams <subcommand> [options]
+```
+
+### eve teams list {#eve-teams-list}
+
+List worker teams.
+
+```bash
+eve teams list
+eve teams list --org org_xxx
 ```

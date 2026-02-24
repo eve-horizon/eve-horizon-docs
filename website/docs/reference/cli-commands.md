@@ -93,7 +93,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve auth](/docs/reference/cli-appendix#eve-auth) | Authenticate via SSH challenge, manage tokens, sync AI credentials |
 | [eve access](/docs/reference/cli-appendix#eve-access) | Check permissions, manage roles and bindings, sync policy-as-code |
 | [eve secrets](/docs/reference/cli-appendix#eve-secrets) | Manage secrets at system, org, user, or project scope |
-| [eve admin](/docs/reference/cli-appendix#eve-admin) | Administrative operations -- invite users, manage ingress aliases |
+| [eve admin](/docs/reference/cli-appendix#eve-admin) | Administrative operations — invites, ingress aliases, billing, usage, service accounts, access requests |
 
 ### Knowledge
 
@@ -118,6 +118,9 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve ollama](/docs/reference/cli-appendix#eve-ollama) | Manage inference targets, model installs, aliases, and route policies |
+| [eve providers](/docs/reference/cli-appendix#eve-providers) | List available AI model providers and endpoints |
+| [eve models](/docs/reference/cli-appendix#eve-models) | Manage inference model aliases and metadata |
+| [eve teams](/docs/reference/cli-appendix#eve-teams) | Create and manage worker teams |
 
 ### Migration
 
@@ -193,6 +196,13 @@ The CLI reads these environment variables when present:
 | `EVE_PARENT_JOB_ID` | Parent job ID for coordination (set for child jobs) |
 | `EVE_PROJECT_ID` | Current project ID (set automatically in deployed services) |
 | `EVE_ORG_ID` | Current org ID (set automatically in deployed services) |
+| `EVE_MANAGED_OLLAMA_URL` | Base URL for managed Ollama fallback inference |
+| `EVE_DB_URL` | Database URL injected into services |
+| `EVE_ENV_NAME` | Current environment name |
+
+:::note
+Collection endpoints return list responses in a JSON envelope when using `--json`, typically `{ "data": [...] }`.
+::: 
 
 ## Next Steps
 

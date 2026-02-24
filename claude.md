@@ -43,6 +43,20 @@ Do not hardcode this path in automation; read it from config/environment where p
 - `pnpm build`
 - `pnpm serve`
 
+## Deployment
+
+Eve staging environment under Incept5 org, project slug `evdocs`.
+
+```bash
+eve profile use staging
+eve project sync --repo-dir .
+eve env deploy staging --ref main --repo-dir .
+```
+
+- **Org:** Incept5 (`org_Incept5`)
+- **Project:** Eve Horizon Docs (`proj_01khygftvpf24t3yyetbkk9nyn`, slug: `evdocs`)
+- **Pipeline:** build → release → deploy (single `docs` service)
+
 ## References
 
 - `private-docs/ideas/design-refactor-plan.md` (style guide)

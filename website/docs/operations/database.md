@@ -112,7 +112,7 @@ After rotation, redeploy services that reference managed database values so they
 
 ## Migrations
 
-Eve provides a migration workflow built around SQL files with timestamp-based ordering.
+Eve ships a purpose-built migration container image, `public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest`, for database migrations.
 
 ### Creating a new migration
 
@@ -128,6 +128,23 @@ You can specify a custom migrations directory:
 eve db new create_users_table --path db/custom-migrations
 ```
 
+### Migration file conventions
+
+Eve-migrate expects:
+
+- `db/migrations/` directory for migration files
+- Timestamped names: `YYYYMMDDHHmmss_description.sql`
+- Regex: `/^(\d{14})_([a-z0-9_]+)\.sql$/`
+- One file = one migration (multiple SQL statements allowed)
+
+Behavior:
+
+- Each migration runs in its own transaction.
+- `schema_migrations` tracks `name`, `checksum`, and `applied_at`.
+- SHA256 checksums prevent silent drift after a migration has run.
+- `pgcrypto` and `uuid-ossp` extensions are installed when needed.
+- Baseline migration behavior handles pre-existing schema objects safely.
+
 ### Running migrations
 
 Apply pending migrations to an environment:
@@ -140,6 +157,15 @@ To use a custom migrations path:
 
 ```bash
 eve db migrate --env staging --path db/migrations
+```
+
+### Migration commands with direct URLs
+
+All migration commands support `--url` to bypass managed DB resolution:
+
+```bash
+eve db migrate --url "postgres://app:app@localhost:5432/myapp" --path db/migrations
+eve db migrations --url "postgres://app:app@localhost:5432/myapp"
 ```
 
 ### Listing applied migrations
@@ -157,25 +183,26 @@ For automated workflows, you can run migrations as a pipeline step using a servi
 ```yaml
 services:
   migrate:
-    image: flyway/flyway:10
-    command: >-
-      -url=jdbc:postgresql://db:5432/app
-      -user=app
-      -password=${secret.DB_PASSWORD}
-      -locations=filesystem:/migrations
-      migrate
-    volumes:
-      - ./db/migrations:/migrations:ro
-    depends_on:
-      db:
-        condition: service_healthy
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
+      files:
+        - source: db/migrations
+          target: /migrations
 
 pipelines:
   deploy:
     steps:
+      - name: build
+        action: { type: build }
+      - name: release
+        depends_on: [build]
+        action: { type: release }
       - name: migrate
+        depends_on: [release]
         action: { type: job, service: migrate }
       - name: deploy
         depends_on: [migrate]
@@ -183,6 +210,45 @@ pipelines:
 ```
 
 This ensures migrations run before the application deploy step, and the pipeline fails if the migration fails.
+
+To use a custom migration engine (for example Flyway), keep the same `x-eve.files` mount and replace `image`/`command`:
+
+```yaml
+services:
+  migrate:
+    image: flyway/flyway:10
+    command: >-
+      -url=${DATABASE_URL}
+      -locations=filesystem:/migrations
+      migrate
+    x-eve:
+      role: job
+      files:
+        - source: db/migrations
+          target: /migrations
+```
+
+### Local migration workflow
+
+For local compose stacks:
+
+```bash
+# docker-compose.yml
+migrate:
+  image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+  environment:
+    DATABASE_URL: postgres://app:app@db:5432/myapp
+  volumes:
+    - ./db/migrations:/migrations:ro
+  depends_on:
+    db:
+      condition: service_healthy
+```
+
+```bash
+docker compose run --rm migrate
+docker compose down -v && docker compose up -d db && docker compose run --rm migrate   # reset
+```
 
 ## Schema management
 
@@ -209,6 +275,12 @@ eve db rls --env staging
 ```
 
 This shows all active row-level security policies, which tables they apply to, and the policy expressions.
+
+Initialize or refresh the default RLS scaffolding:
+
+```bash
+eve db rls init --env staging --with-groups
+```
 
 ## SQL access
 
@@ -254,6 +326,23 @@ eve db scale --env staging --class db.p2
 ```
 
 This changes the database tier for the specified environment. The operation may involve a brief maintenance window depending on the platform configuration.
+
+## Database reset and wipe
+
+Use these commands when you need to reinitialize a database:
+
+- `eve db reset`: drop + recreate + run migrations
+- `eve db wipe`: drop + recreate without running migrations
+
+```bash
+eve db reset --env staging --force
+eve db wipe --env staging --force
+```
+
+```bash
+eve db reset --url "postgres://app:app@localhost:5432/myapp" --force
+eve db wipe --url "postgres://app:app@localhost:5432/myapp" --force
+```
 
 ## Backup and restore
 
@@ -301,18 +390,33 @@ Per-environment tenant endpoints:
 
 ## CLI reference
 
+Most `eve db` commands accept `--url <postgres-url>` as an alternative to `--env` for direct connection mode.
+
 | Command | Purpose |
 |---------|---------|
 | `eve db status --env <name>` | Check managed DB provisioning state |
+| `eve db status --url <postgres-url>` | Check DB status for direct URL mode |
 | `eve db schema --env <name>` | Inspect database schema |
+| `eve db schema --url <postgres-url>` | Inspect schema for direct URL |
 | `eve db rls --env <name>` | View row-level security policies |
+| `eve db rls --url <postgres-url>` | View RLS policies for direct URL |
+| `eve db rls init --env <name> --with-groups` | Bootstrap RLS scaffolding for groups |
+| `eve db rls init --url <postgres-url> --with-groups` | Bootstrap RLS scaffolding in direct URL mode |
 | `eve db sql --env <name> --sql "..."` | Execute read query |
 | `eve db sql --env <name> --sql "..." --write` | Execute write query |
 | `eve db sql --env <name> --file ./query.sql` | Execute query from file |
+| `eve db sql --url <postgres-url> --sql "..."` | Execute read query in direct URL mode |
 | `eve db migrate --env <name>` | Run pending migrations |
+| `eve db migrate --url <postgres-url>` | Run pending migrations for direct URL mode |
 | `eve db migrations --env <name>` | List applied migrations |
+| `eve db migrations --url <postgres-url>` | List applied migrations for direct URL mode |
 | `eve db new <description>` | Create new migration file |
+| `eve db new <description> --path <dir>` | Create migration in custom local path |
 | `eve db rotate-credentials --env <name>` | Rotate database credentials |
+| `eve db reset --env <name> --force` | Drop/recreate and rerun migrations |
+| `eve db reset --url <postgres-url> --force` | Drop/recreate direct URL and rerun migrations |
+| `eve db wipe --env <name> --force` | Drop/recreate without migration replay |
+| `eve db wipe --url <postgres-url> --force` | Drop/recreate direct URL without migration replay |
 | `eve db scale --env <name> --class <tier>` | Change database tier |
 | `eve db destroy --env <name> --force` | Remove database tenant |
 

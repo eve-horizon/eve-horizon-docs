@@ -322,6 +322,7 @@ eve env deploy staging --ref <sha> --direct --image-tag sha-abc123
 ```bash
 eve build logs <build_id>                # Timestamped build output
 eve build logs <build_id> --run <id>     # Specific run's logs
+eve build logs <build_id> --run <id> --follow  # Stream logs
 ```
 
 Each log line is prefixed with `[HH:MM:SS]` timestamps. Clone, checkout, and workspace preparation phases all produce observable log entries — not just the Dockerfile execution phase.
@@ -337,7 +338,7 @@ Shows a consolidated view of:
 - Build spec (git SHA, manifest hash, services)
 - All runs with status, backend, and timestamps
 - Build artifacts (images and digests)
-- Recent logs (last 50 entries)
+- Recent logs (last 30 entries)
 - Error classification with actionable hints
 
 ### Error classification
@@ -383,7 +384,7 @@ eve build create --project <id> --ref <sha> \
   [--repo-dir <path>]                              # Create a build spec
 eve build run <build_id>                           # Start a build run
 eve build runs <build_id>                          # List runs for a build
-eve build logs <build_id> [--run <id>]             # View build logs
+eve build logs <build_id> [--run <id>] [--follow]  # View or stream build logs
 eve build artifacts <build_id>                     # List image artifacts
 eve build diagnose <build_id>                      # Full diagnostic dump
 eve build cancel <build_id>                        # Cancel active build

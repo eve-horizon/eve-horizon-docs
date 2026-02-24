@@ -101,16 +101,14 @@ Eve supports multiple worker types, each providing a container image with differ
 | **base** | Runtime without toolchains -- Node.js, worker harness, and base utilities only |
 | **python** | Python 3.11, pip, uv package manager |
 | **rust** | Rust 1.75 via rustup, cargo |
-| **java** | OpenJDK 21 |
-| **kotlin** | Kotlin 2.0 + OpenJDK 21 |
-| **full** | All toolchains combined (default for local development) |
+| **node** | JavaScript/TypeScript tooling with modern Node runtime |
 
 ### Worker routing
 
 The orchestrator uses `EVE_WORKER_URLS` to map worker type names to service URLs:
 
 ```
-EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-python:4811
+EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-python:4811,rust-worker=http://worker-rust:4811,node-worker=http://worker-node:4811
 ```
 
 | Worker type | Routes to | Image |
@@ -118,8 +116,7 @@ EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-py
 | `default-worker` | `worker` service | base (or per `EVE_WORKER_VARIANT`) |
 | `python-worker` | `worker-python` service | python variant |
 | `rust-worker` | `worker-rust` service | rust variant |
-| `java-worker` | `worker-java` service | java variant |
-| `kotlin-worker` | `worker-kotlin` service | kotlin variant |
+| `node-worker` | `worker-node` service | node variant |
 
 If a job specifies a worker type not present in `EVE_WORKER_URLS`, it fails early with a clear error.
 
@@ -144,8 +141,8 @@ $WORKSPACE_ROOT/                     # e.g., /opt/eve/workspaces
     repo/                            # cloned/copied repository
       AGENTS.md                      # project memory for agents
       CLAUDE.md                      # Claude-specific instructions
-      .agent/skills/                 # installed skills (gitignored)
-      .agent/harnesses/<harness>/    # per-harness config (optional)
+      .agents/skills/                # installed skills (gitignored)
+      .agents/harnesses/<harness>/   # per-harness config (optional)
 ```
 
 | Variable | Value | Description |
@@ -339,7 +336,7 @@ Eve does not auto-refresh Code/Codex tokens. Re-authenticate with `codex auth` o
 Harness configuration is read from a single root directory with per-harness subfolders:
 
 ```
-.agent/harnesses/
+.agents/harnesses/
   <harness>/
     config.toml|json|yaml
     variants/
@@ -350,7 +347,10 @@ Harness configuration is read from a single root directory with per-harness subf
 **Resolution order:**
 
 1. `EVE_HARNESS_CONFIG_ROOT` (if set) -- `<root>/<harness>`
-2. `<repo>/.agent/harnesses/<harness>` (in-repo default)
+2. `<repo>/.agents/harnesses/<harness>` (in-repo default)
+3. `${XDG_CONFIG_HOME:-~/.config}/eve/harnesses/<harness>` (XDG user config)
+4. `~/.cc-mirror/harnesses/<harness>` (cc-mirror legacy path)
+5. `/etc/eve/harnesses/<harness>` (system fallback)
 
 If a `variants/<variant>` directory exists, it overlays the base config directory.
 

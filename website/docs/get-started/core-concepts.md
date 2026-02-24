@@ -28,7 +28,7 @@ A **job** is the fundamental unit of work. Every action in Eve — running an AI
 
 ### Job lifecycle
 
-Jobs flow through six phases:
+Jobs flow through six phases plus a terminal state:
 
 ```mermaid
 stateDiagram-v2
@@ -217,7 +217,10 @@ sequenceDiagram
 
 Event sources include:
 - **GitHub** — push, pull request webhooks
+- **Cron** — scheduled events
 - **Slack** — messages and commands via the chat gateway
+- **App** — lifecycle and deployment events emitted by applications
+- **Chat** — cross-channel chat events (Nostr/WebChat and gateway-proxied events)
 - **System** — job failures, pipeline failures, document mutations
 - **Manual** — emitted via the CLI with `eve event emit`
 - **Runner** — lifecycle events from job execution (started, progress, completed, failed)

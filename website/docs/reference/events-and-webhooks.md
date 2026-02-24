@@ -22,7 +22,7 @@ graph LR
     E --> I[Webhook Deliveries]
 ```
 
-Events are stored in Postgres and keyed by TypeID (`evt_xxx`). The orchestrator polls pending events every five seconds, matches them against manifest triggers, and creates pipeline runs or workflow jobs when triggers match.
+Events are stored in Postgres and consumed from the event queue. The orchestrator matches new events against manifest triggers and creates pipeline runs or workflow jobs when matches occur.
 
 Multiple orchestrator instances can safely process the queue in parallel. Events are claimed in batches using `FOR UPDATE SKIP LOCKED`, which prevents double-claiming without requiring external locks.
 
@@ -96,14 +96,14 @@ System events are emitted automatically by the orchestrator and other platform c
 
 | Type | Trigger | Payload |
 |------|---------|---------|
-| `system.job.failed` | Job execution failure | `{ job_id, attempt_id, error_message, error_code, exit_code }` |
-| `system.pipeline.failed` | Pipeline run failure | `{ run_id, pipeline_name, error_message, error_code, exit_code }` |
-| `system.doc.created` | Org document created | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash }` |
-| `system.doc.updated` | Org document updated | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash }` |
-| `system.doc.deleted` | Org document deleted | `{ org_id, project_id, doc_id, path, version, content_hash }` |
-| `system.resource.hydration.started` | Worker begins resource hydration | `{ job_id, attempt_id, resource_count }` |
-| `system.resource.hydration.completed` | Worker completes hydration | `{ job_id, attempt_id, resolved_count, missing_optional_count }` |
-| `system.resource.hydration.failed` | Worker hydration failed | `{ job_id, attempt_id, resolved_count, failed_required_count }` |
+| `system.job.failed` | Job execution failure | `{ job_id, attempt_id, error_message, error_code, exit_code, mutation_id, request_id, metadata }` |
+| `system.pipeline.failed` | Pipeline run failure | `{ run_id, pipeline_name, error_message, error_code, exit_code, mutation_id, request_id, metadata }` |
+| `system.doc.created` | Org document created | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash, mutation_id, request_id, metadata }` |
+| `system.doc.updated` | Org document updated | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash, mutation_id, request_id, metadata }` |
+| `system.doc.deleted` | Org document deleted | `{ org_id, project_id, doc_id, path, version, content_hash, mutation_id, request_id, metadata }` |
+| `system.resource.hydration.started` | Worker begins resource hydration | `{ job_id, attempt_id, resource_count, resources }` |
+| `system.resource.hydration.completed` | Worker completes hydration | `{ job_id, attempt_id, resolved_count, missing_optional_count, resources }` |
+| `system.resource.hydration.failed` | Worker hydration failed | `{ job_id, attempt_id, resolved_count, failed_required_count, resources }` |
 
 ### Runner events
 
@@ -116,9 +116,12 @@ Runner pods emit lifecycle events for worker coordination.
 | `runner.completed` | Runner finished successfully | `{ attemptId, jobId, result }` |
 | `runner.failed` | Runner execution failed | `{ attemptId, jobId, error, exitCode }` |
 
-:::note
-Runner event payloads use **camelCase** field names, unlike system events which use snake_case.
-:::
+Runner payloads use `snake_case` field names:
+
+* `runner.started`: `{ attempt_id, job_id }`
+* `runner.progress`: `{ attempt_id, job_id, message, percentage }`
+* `runner.completed`: `{ attempt_id, job_id, result }`
+* `runner.failed`: `{ attempt_id, job_id, error, exit_code }`
 
 ### LLM usage events
 
@@ -146,7 +149,7 @@ Triggers connect events to pipeline runs and workflow jobs. They are defined in 
 ### How triggers work
 
 1. An event arrives in the events table with status `pending`
-2. The orchestrator polls every ~5 seconds
+2. The orchestrator checks queued events
 3. It loads the project manifest and checks all pipeline and workflow triggers
 4. If a trigger matches, it creates a pipeline run or workflow job
 5. The event is marked `completed` (or `failed` if routing errors)
@@ -369,7 +372,7 @@ eve event show <event-id>
 
 # Emit a custom event
 eve event emit --type manual.test --source manual --payload '{"key":"value"}'
-eve event emit --type app.deploy-check --source app --env staging --branch main
+eve event emit --type app.deploy-check --source app --env staging --ref-branch main
 ```
 
 See [eve event](/docs/reference/cli-commands) in the CLI reference for the full flag list.

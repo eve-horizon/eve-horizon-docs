@@ -54,8 +54,9 @@ workflows:
       permission_policy: auto_edit
     trigger:
       github:
-        event: check_suite
-        branch: main
+        event: pull_request
+        action: [opened, synchronize]
+        base_branch: main
     steps:
       - agent:
           prompt: "Diagnose and fix the failing CI pipeline"
@@ -145,18 +146,63 @@ workflows:
     trigger:
       github:
         event: pull_request
-        branch: main
+        base_branch: main
     steps:
       - agent:
           prompt: "Review this pull request for security issues"
+```
+
+### System trigger
+
+```yaml
+workflows:
+  self-heal:
+    trigger:
+      system:
+        event: job.failed
+        pipeline: deploy
+    steps:
+      - agent:
+          prompt: "Investigate the failed deployment and suggest a fix"
+```
+
+### Slack trigger
+
+```yaml
+workflows:
+  slack-mentions:
+    trigger:
+      slack:
+        event: message
+        channel: C123ABC
+    steps:
+      - agent:
+          prompt: "Summarize relevant channel updates and classify action items"
+```
+
+### Manual trigger
+
+```yaml
+workflows:
+  on-demand-audit:
+    trigger:
+      manual: true
+    steps:
+      - agent:
+          prompt: "Run a security audit of the latest changes"
 ```
 
 ### Trigger fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `trigger.github.event` | string | GitHub event type: `push`, `pull_request`, `check_suite`, `release`, etc. |
-| `trigger.github.branch` | string | Branch filter. Only events matching this branch fire the workflow. |
+| `trigger.github.event` | string | GitHub event type: `push` or `pull_request` |
+| `trigger.github.branch` | string | Branch filter for push events |
+| `trigger.github.base_branch` | string | Base branch filter for pull request events |
+| `trigger.github.action` | array<string> | Actions to match for pull request events |
+| `trigger.system` | object | Optional system event trigger: `event` and optional `pipeline` |
+| `trigger.slack` | object | Optional Slack event filter (`event`, `channel`) |
+| `trigger.manual` | boolean | Set to `true` for manual-only invocation |
 
 Trigger configuration follows the same structure as [pipeline triggers](/docs/reference/pipelines) -- specify the event source, event type, and optional branch filter.
 
@@ -402,7 +448,7 @@ workflows:
       timeout_seconds: 900
     trigger:
       github:
-        event: check_suite
+        event: pull_request
         branch: main
     steps:
       - agent:

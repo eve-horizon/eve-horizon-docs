@@ -65,9 +65,11 @@ eve local up
 # Check health and status
 eve local health
 eve local status
+eve local logs
 
 # Stop when done
 eve local down
+eve local reset
 ```
 
 `eve local up` auto-installs and manages `k3d` and `kubectl` in `~/.eve/bin`.
@@ -101,13 +103,23 @@ graph TD
     A --> D[Worker :4811]
     A --> E[Postgres :5432]
     A --> F[DB Migration Job]
-    D --> G[Runner Pods]
+    A --> G[Auth Gateway]
+    A --> H[Mailpit]
+    A --> I[SSO]
+    D --> J[Runner Pods]
 ```
 
 - **API, Orchestrator, Worker** — cluster-scoped deployments in the `eve` namespace
 - **Postgres** — StatefulSet with 5Gi PVC
+- **SSO and Auth** — local auth and single sign-on endpoints
+- **Mailpit** — local email capture endpoint
 - **Runner pods** — ephemeral pods spawned per job attempt for isolated execution
-- **Ingress** — access via `http://api.eve.lvh.me` (no port-forwarding needed; `lvh.me` resolves to `127.0.0.1`)
+- **Ingress** — access via:
+  - `api.eve.lvh.me`
+  - `auth.eve.lvh.me`
+  - `mail.eve.lvh.me`
+  - `sso.eve.lvh.me`
+  (no port-forwarding needed; `lvh.me` resolves to `127.0.0.1`)
 
 ## When to use which mode
 
@@ -198,7 +210,13 @@ The typical k3d development workflow follows these steps:
 4. **Apply manifests** — `kubectl apply -k k8s/overlays/local`.
 5. **Run migration** — the DB migration job runs and waits for completion.
 6. **Wait for rollout** — all deployments must report ready.
-7. **Access services** — API and Worker are accessible via ingress (`api.eve.lvh.me`) or port-forward.
+7. **Access services** — ingress endpoints include:
+   - `api.eve.lvh.me`
+   - `auth.eve.lvh.me`
+   - `mail.eve.lvh.me`
+   - `sso.eve.lvh.me`
+
+or port-forward when needed.
 
 For Docker Compose, the workflow is simpler: `./bin/eh start docker` handles everything.
 

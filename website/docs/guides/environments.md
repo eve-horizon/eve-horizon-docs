@@ -21,9 +21,14 @@ environments:
     pipeline_inputs:
       smoke_test: true
       timeout: 1800
+    type: persistent
+    kind: standard
   production:
     pipeline: deploy
     approval: required
+    type: persistent
+    kind: standard
+    labels: [stable]
 ```
 
 | Field | Description |
@@ -32,6 +37,9 @@ environments:
 | `pipeline_inputs` | Default inputs passed to the pipeline run |
 | `approval` | Set to `required` to gate deploy and job steps |
 | `overrides` | Compose-style service overrides for this environment |
+| `type` | `persistent` or `temporary` |
+| `kind` | `standard` or `preview` |
+| `labels` | Environment metadata labels |
 | `workers` | Worker pool selection for this environment |
 
 When a `pipeline` is configured, [eve env deploy](/docs/reference/cli-commands) becomes a pipeline alias — it triggers a pipeline run instead of performing a direct deployment. This is the recommended pattern for all non-local environments.

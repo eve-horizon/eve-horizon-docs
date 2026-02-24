@@ -198,18 +198,18 @@ Job services run as one-off tasks. They are not deployed as persistent container
 ```yaml
 services:
   migrate:
-    image: flyway/flyway:10
-    command: >-
-      -url=jdbc:postgresql://db:5432/app
-      -user=app
-      -password=${secret.DB_PASSWORD}
-      -locations=filesystem:/migrations
-      migrate
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
     depends_on:
       db:
         condition: service_healthy
     x-eve:
       role: job
+      files:
+        - source: db/migrations
+          target: /migrations
 ```
 
 Reference job services from pipeline steps using the `job` action type:
@@ -224,6 +224,76 @@ pipelines:
         depends_on: [migrate]
         action: { type: deploy }
 ```
+
+### Recommended migration pattern (Eve-native)
+
+For the simplest setup, use `public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest` as a `role: job` service:
+
+```yaml
+services:
+  migrate:
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
+    x-eve:
+      role: job
+      files:
+        - source: db/migrations
+          target: /migrations
+```
+
+Migration file conventions:
+
+- Keep SQL files in `db/migrations/`
+- Use `YYYYMMDDHHmmss_description.sql` naming
+- Regex pattern: `^(\d{14})_([a-z0-9_]+)\.sql$`
+- One migration file per logical migration (may contain multiple SQL statements)
+
+Eve migration behavior:
+
+- Tracks applied migrations in `schema_migrations` (`name`, `checksum`, `applied_at`)
+- Re-runs with `ROLLBACK` safety for failed scripts
+- Auto-creates `pgcrypto` and `uuid-ossp`
+- Auto-baseline when the database already contains existing schema objects
+
+### Local development example
+
+For docker-compose workflows:
+
+```yaml
+services:
+  migrate:
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/myapp
+    volumes:
+      - ./db/migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: myapp
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+```
+
+```bash
+docker compose run --rm migrate        # Apply migrations
+docker compose down -v && docker compose up -d db && docker compose run --rm migrate
+```
+
+:::note
+You can still run a BYO migration tool if your org requires it, but the Eve-migrate container is the recommended default for documentation parity.
+:::
 
 ## Managed databases
 
@@ -384,12 +454,12 @@ services:
   stripe:
     x-eve:
       external: true
-      connection_url: https://api.stripe.com
+      url: https://api.stripe.com
 
   legacy-db:
     x-eve:
       external: true
-      connection_url: postgres://user:pass@legacy-host:5432/mydb
+      url: postgres://user:pass@legacy-host:5432/mydb
 ```
 
 External services appear in the dependency graph and can be referenced by other services, but Eve skips them during deployment. This is useful for documenting the full system topology in a single manifest.
@@ -515,15 +585,18 @@ services:
         port: 80
 
   migrate:
-    build:
-      context: ./apps/api
-    image: acme-api
-    command: ["node", "dist/migrate.js"]
+    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    environment:
+      DATABASE_URL: ${managed.db.url}
+      MIGRATIONS_DIR: /migrations
     depends_on:
       db:
         condition: service_healthy
     x-eve:
       role: job
+      files:
+        - source: db/migrations
+          target: /migrations
 ```
 
 This configuration gives you a managed Postgres database provisioned by the platform, an API with public ingress and OpenAPI discovery, a web frontend, and a migration job that runs before deployments via pipeline steps. All secrets and managed connection strings are resolved at deploy time.

@@ -124,6 +124,24 @@ gateway:
 
 Default to `none`. Make agents `routable` only when they should receive direct messages from chat. `discoverable` is useful for agents that should appear in listings but only respond when routed through a team.
 
+## Agent runtime and warm pods
+
+Chat requests can be served from pre-provisioned, org-scoped runtime containers (warm pods) to reduce first-response latency for conversational flows.
+
+- Warm runtimes are intended for low-latency chat and small helper jobs.
+- Heavy or untrusted tasks should prefer full runner execution.
+- Set `EVE_AGENT_RUNTIME_EXECUTION_MODE` to:
+  - `inline` to reuse the warm runtime path
+  - `runner` to run each request in an ephemeral runner pod
+
+Inspect current runtime status with:
+
+```bash
+eve agents runtime-status
+```
+
+If warm pods are disabled, first response times are higher but isolation is stronger.
+
 ## Teams and dispatch modes
 
 Teams group agents under a lead for coordinated work. When work is dispatched to a team, the lead agent orchestrates the members according to the team's dispatch mode.

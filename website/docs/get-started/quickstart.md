@@ -26,6 +26,12 @@ You need an account on the Eve platform before you can do anything.
 eve admin invite --email you@example.com --ssh-key ~/.ssh/id_ed25519.pub
 ```
 
+Admins can also invite using a GitHub username and let Eve fetch SSH keys automatically:
+
+```bash
+eve admin invite --email you@example.com --github octocat
+```
+
 **If you're requesting access yourself:**
 
 ```bash
@@ -119,6 +125,30 @@ environments:
     type: persistent
 
 pipelines:
+  ci-cd-main:
+    trigger:
+      github:
+        event: push
+        branch: main
+    steps:
+      - name: build
+        action: { type: build }
+      - name: release
+        depends_on: [build]
+        action: { type: release }
+      - name: deploy
+        depends_on: [release]
+        action: { type: deploy, env_name: sandbox }
+
+  remediation:
+    trigger:
+      system:
+        event: job.failed
+        pipeline: deploy
+    steps:
+      - name: create-ticket
+        action: { type: run, command: "./scripts/create-ticket" }
+
   deploy-sandbox:
     steps:
       - name: build
@@ -129,6 +159,17 @@ pipelines:
       - name: deploy
         depends_on: [release]
         action: { type: deploy, env_name: sandbox }
+
+workflows:
+  log-audit:
+    trigger:
+      cron:
+        schedule: "0 6 * * *"
+    hints:
+      worker_type: mclaude
+    steps:
+      - agent:
+          prompt: "Summarize yesterday's environment and deployment events"
 ```
 
 Change `project: eve-starter` to your slug:
@@ -195,7 +236,15 @@ eve project sync
 eve env deploy sandbox --ref main
 ```
 
-`eve env deploy` is the single deploy command. Because the sandbox environment has a pipeline configured in the manifest, it automatically triggers the full build → release → deploy flow. The command watches progress and reports when done:
+`--repo-dir` can point to a different checkout for deploy metadata. Omitting it defaults to the current directory:
+
+```bash
+eve env deploy sandbox --ref main --repo-dir ../path/to/repo
+```
+
+When `--repo-dir` points to a repo that includes `.eve/manifest.yaml`, the CLI auto-syncs that manifest before deploy.
+
+`eve env deploy` is the single deploy command. It resolves the ref, creates a build, creates a release, and deploys. The command watches progress and reports when done:
 
 ```
 Resolved ref 'main' → 3666f989...

@@ -122,7 +122,7 @@ services:
     image: redis:7
     x-eve:
       external: true
-      connection_url: redis://redis:6379
+      url: redis://redis:6379
 ```
 
 ## Five service design rules
@@ -133,7 +133,7 @@ These rules emerge from how Eve provisions and connects services. Following them
 
 2. **Use managed DB for Postgres.** Declare `x-eve.role: managed_db` and let the platform provision, connect, and inject credentials. No manual connection strings. Reference the URL with `${managed.db.url}` in other services.
 
-3. **Mark external services explicitly.** Use `x-eve.external: true` with `x-eve.connection_url` for services hosted outside Eve (Redis, third-party APIs, external databases). This tells the platform not to deploy them but to make their connection information available.
+3. **Mark external services explicitly.** Use `x-eve.external: true` with `x-eve.url` for services hosted outside Eve (Redis, third-party APIs, external databases). This tells the platform not to deploy them but to make their connection information available.
 
 4. **Use `x-eve.role: job` for one-off tasks.** Migrations, seeds, and data backfills are job services, not persistent processes. Mark them with the `job` role so the platform knows they run to completion and exit.
 

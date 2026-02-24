@@ -152,6 +152,13 @@ Ensure:
 - `EVE_DEFAULT_DOMAIN` is set on the worker
 - DNS resolves for the domain (for local dev, `lvh.me` resolves to `127.0.0.1` automatically)
 
+When you need pod-level context, pull environment logs with `eve env logs`:
+
+```bash
+eve env logs <project> <env> --since 5m
+eve env logs <project> <env> --all-pods --grep "startup" --tail 200
+```
+
 ### Job debugging
 
 **Symptom:** Job stuck in "ready" phase -- not starting.
@@ -293,6 +300,7 @@ eve system logs worker
 | `eve job watch <id>` | Combined status + logs streaming |
 | `eve job follow <id>` | Harness JSONL logs (SSE) -- harness output only |
 | `eve job runner-logs <id>` | K8s runner pod stdout/stderr |
+| `eve env logs <project> <env> --since <duration> --tail <n> --grep <pattern>` | Environment logs with pod/container filtering |
 | `eve job wait <id> --verbose` | Status changes while waiting |
 
 :::note
