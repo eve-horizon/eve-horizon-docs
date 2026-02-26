@@ -73,6 +73,14 @@
   animation: fadeSlideUp 0.6s ease-out both;
 }
 
+.heroDivider {
+  width: 80px;
+  height: 1px;
+  margin: 2.5rem auto;
+  background: var(--eve-border-accent);
+  opacity: 0.5;
+}
+
 .heroSubtitle {
   font-size: var(--eve-text-lg);
   color: var(--eve-text-secondary);
@@ -212,6 +220,7 @@
 .features {
   padding: 2.5rem 0 3rem;
   position: relative;
+  border-top: 1px solid var(--eve-border);
 }
 
 .featuresHeading {

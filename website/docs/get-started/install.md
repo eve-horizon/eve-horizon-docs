@@ -32,26 +32,53 @@ If you encounter permission errors with `npm install -g`, see the [npm docs on f
 ## Verify the installation
 
 ```bash
-eve --version
-```
-
-You should see a version number. If you get `command not found`, your global npm bin directory is not on your `PATH` — find it with `npm bin -g` and add it to your shell profile:
-
-```bash
-export PATH="$(npm bin -g):$PATH"
-```
-
-Check that the CLI is working:
-
-```bash
 eve --help
 ```
 
-This shows the top-level command list. Every subcommand also supports `--help`:
+You should see the top-level command list. Every subcommand also supports `--help`:
 
 ```bash
 eve job --help
 eve project --help
+```
+
+You can also confirm the installed version via npm:
+
+```bash
+npm list -g @eve-horizon/cli
+```
+
+### `command not found`?
+
+If `eve --help` returns `command not found`, your global npm bin directory isn't on your `PATH`. This is common with nvm, volta, and fnm setups on macOS.
+
+Find where npm installs global binaries:
+
+```bash
+npm config get prefix
+```
+
+That prints something like `/Users/you/.npm-global` or `/usr/local`. The `eve` binary lives in `<prefix>/bin/`.
+
+**Quick fix** — add it to your current session:
+
+```bash
+export PATH="$(npm config get prefix)/bin:$PATH"
+eve --help
+```
+
+**Permanent fix** — add this line to `~/.zshrc` (or `~/.bashrc`):
+
+```bash
+export PATH="$(npm config get prefix)/bin:$PATH"
+```
+
+Then restart your terminal or run `source ~/.zshrc`.
+
+**Alternative** — bypass PATH entirely with `npx`:
+
+```bash
+npx @eve-horizon/cli --help
 ```
 
 ## Keep the CLI updated

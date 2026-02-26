@@ -82,6 +82,11 @@ function Hero() {
         <Heading as="h1" className={styles.heroTitle}>
           {siteConfig.title}
         </Heading>
+        <Heading as="h2" className={styles.quickStartHeading}>
+          Start in 60 Seconds
+        </Heading>
+        <QuickStartTerminal />
+        <div className={styles.heroDivider} />
         <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
         <div className={styles.heroButtons}>
           <Link className={styles.heroPrimary} to="/docs/get-started/what-is-eve-horizon">
@@ -91,7 +96,6 @@ function Hero() {
             CLI Reference
           </Link>
         </div>
-        <TerminalMockup />
       </div>
     </header>
   );
@@ -227,47 +231,44 @@ function Features() {
    Quick Start Strip
    ---------------------------------------------------------------- */
 
-function QuickStart() {
+function QuickStartTerminal() {
   return (
-    <section className={styles.quickStart}>
-      <div className="container">
-        <Heading as="h2" className={styles.quickStartHeading}>
-          Start in 60 Seconds
-        </Heading>
-        <div className={`${styles.terminal} ${styles.quickTerminal}`}>
-          <div className={styles.terminalHeader}>
-            <span className={styles.terminalDot} />
-            <span className={styles.terminalDot} />
-            <span className={styles.terminalDot} />
-          </div>
-          <div className={styles.terminalBody}>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalPrompt}>$ </span>
-              <span className={styles.terminalCommand}>npm install -g @eve-horizon/cli</span>
-            </div>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalPrompt}>$ </span>
-              <span className={styles.terminalCommand}>mkdir my-project && cd my-project</span>
-            </div>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalPrompt}>$ </span>
-              <span className={styles.terminalCommand}>eve skills install https://github.com/incept5/eve-skillpacks</span>
-            </div>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalPrompt}>$ </span>
-              <span className={styles.terminalCommand}>claude</span>
-            </div>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalComment}>{'# inside Claude, run:'}</span>
-            </div>
-            <div className={styles.terminalLine}>
-              <span className={styles.terminalAgent}>&gt; </span>
-              <span className={styles.terminalCommand}>/eve-bootstrap</span>
-            </div>
-          </div>
+    <div className={`${styles.terminal} ${styles.quickTerminal}`}>
+      <div className={styles.terminalHeader}>
+        <span className={styles.terminalDot} />
+        <span className={styles.terminalDot} />
+        <span className={styles.terminalDot} />
+      </div>
+      <div className={styles.terminalBody}>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalPrompt}>$ </span>
+          <span className={styles.terminalCommand}>npm install -g @eve-horizon/cli</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalPrompt}>$ </span>
+          <span className={styles.terminalCommand}>mkdir my-project && cd my-project</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalPrompt}>$ </span>
+          <span className={styles.terminalCommand}>{'echo "https://github.com/incept5/eve-skillpacks" >> skills.txt'}</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalPrompt}>$ </span>
+          <span className={styles.terminalCommand}>eve skills install</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalPrompt}>$ </span>
+          <span className={styles.terminalCommand}>claude</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalComment}>{'# inside Claude, run:'}</span>
+        </div>
+        <div className={styles.terminalLine}>
+          <span className={styles.terminalAgent}>&gt; </span>
+          <span className={styles.terminalCommand}>/eve-bootstrap</span>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -282,7 +283,11 @@ export default function Home(): ReactNode {
       <Hero />
       <main>
         <Features />
-        <QuickStart />
+        <section className={styles.quickStart}>
+          <div className="container">
+            <TerminalMockup />
+          </div>
+        </section>
       </main>
     </Layout>
   );
