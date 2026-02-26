@@ -90,10 +90,10 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 
 | Command | Description |
 |---------|-------------|
-| [eve auth](/docs/reference/cli-appendix#eve-auth) | Authenticate via SSH challenge, manage tokens, sync AI credentials |
+| [eve auth](/docs/reference/cli-appendix#eve-auth) | Authenticate via SSH challenge (with SSH key auto-discovery), manage tokens, sync AI credentials |
 | [eve access](/docs/reference/cli-appendix#eve-access) | Check permissions, manage roles and bindings, sync policy-as-code |
 | [eve secrets](/docs/reference/cli-appendix#eve-secrets) | Manage secrets at system, org, user, or project scope |
-| [eve admin](/docs/reference/cli-appendix#eve-admin) | Administrative operations — invites, ingress aliases, billing, usage, service accounts, access requests |
+| [eve admin](/docs/reference/cli-appendix#eve-admin) | Administrative operations — list users, invites, ingress aliases, billing, usage, service accounts, access requests |
 
 ### Knowledge
 
@@ -103,7 +103,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve memory](/docs/reference/cli-appendix#eve-memory) | Manage canonical agent memory namespaces backed by org docs |
 | [eve kv](/docs/reference/cli-appendix#eve-kv) | Agent key-value state with optional TTL |
 | [eve search](/docs/reference/cli-appendix#eve-search) | Unified org search across memory, docs, threads, attachments, events |
-| [eve fs](/docs/reference/cli-appendix#eve-fs) | Manage org filesystem sync links, events, and diagnostics |
+| [eve fs](/docs/reference/cli-appendix#eve-fs) | Manage org filesystem sync plus sharing and public-path publishing |
 | [eve resources](/docs/reference/cli-appendix#eve-resources) | Resolve resource URIs into content snapshots |
 
 ### Observability
@@ -117,7 +117,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 
 | Command | Description |
 |---------|-------------|
-| [eve ollama](/docs/reference/cli-appendix#eve-ollama) | Manage inference targets, model installs, aliases, and route policies |
+| [eve ollama](/docs/reference/cli-appendix#eve-ollama) | Manage inference targets, remote pulls/model listing, installs, aliases, and route policies |
 | [eve providers](/docs/reference/cli-appendix#eve-providers) | List available AI model providers and endpoints |
 | [eve models](/docs/reference/cli-appendix#eve-models) | Manage inference model aliases and metadata |
 | [eve teams](/docs/reference/cli-appendix#eve-teams) | Create and manage worker teams |

@@ -266,6 +266,23 @@ Administrative commands for user, identity, and platform operations.
 eve admin <subcommand> [options]
 ```
 
+### eve admin users {#eve-admin-users}
+
+List platform users and org memberships (system admin).
+
+```bash
+eve admin users [--json]
+```
+
+Output includes user email, display name, admin status, org memberships/roles, and creation date.
+
+**Examples:**
+
+```bash
+eve admin users
+eve admin users --json
+```
+
 ### eve admin invite {#eve-admin-invite}
 
 Invite a user by registering their GitHub SSH keys and adding them to an org.
@@ -676,7 +693,7 @@ Login via GitHub SSH challenge (default) or Supabase (legacy).
 |------|------|---------|-------------|
 | `--email <email>` | string | Profile `default_email` | Email address for SSH login |
 | `--user-id <id>` | string | — | User id for SSH login |
-| `--ssh-key <path>` | string | Profile `default_ssh_key`, then `~/.ssh/id_ed25519` | Path to SSH private key |
+| `--ssh-key <path>` | string | Profile `default_ssh_key` | Path to SSH private key (when omitted, the CLI auto-discovers keys in `~/.ssh/`, preferring `id_ed25519`, then `id_ecdsa`, then `id_rsa`) |
 | `--ttl <days>` | number | Server configured | Token TTL in days (1-90) |
 | `--password <pass>` | string | — | Supabase password (triggers Supabase login) |
 | `--supabase-url <url>` | string | — | Supabase URL |
@@ -690,6 +707,8 @@ eve auth login --email user@example.com --ttl 30
 eve auth login                    # uses profile defaults if set
 eve auth login --ssh-key ~/.ssh/id_rsa
 ```
+
+If auto-discovery is used, the CLI prints which SSH key succeeded.
 
 ### eve auth logout {#eve-auth-logout}
 
@@ -1614,10 +1633,10 @@ eve event emit --project proj_xxx --type deploy.finished --source ci \
 
 ## eve fs {#eve-fs}
 
-Manage org filesystem sync links, events, and diagnostics.
+Manage org filesystem sync links, share links, public path prefixes, and diagnostics.
 
 ```
-eve fs sync <subcommand> [options]
+eve fs <sync|share|shares|revoke|publish|public-paths> [options]
 ```
 
 ### eve fs sync {#eve-fs-sync}
@@ -1650,6 +1669,66 @@ eve fs sync status --org org_xxx
 eve fs sync logs --org org_xxx --follow
 eve fs sync mode --org org_xxx --set pull-only
 eve fs sync doctor --org org_xxx
+```
+
+### eve fs share {#eve-fs-share}
+
+Create a time-limited share URL for an org filesystem path.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <id>` | string | Profile default | Organization scope |
+| `--expires <duration>` | string | Server default | Expiry duration (for example `1h`, `7d`) |
+| `--label <text>` | string | — | Human-readable label |
+| `--json` | boolean | `false` | Output full share payload as JSON |
+
+**Examples:**
+
+```bash
+eve fs share /test/scenario-26.md --org org_xxx --expires 1h
+eve fs share /docs/roadmap.md --org org_xxx --label "External review"
+eve fs share /docs/roadmap.md --org org_xxx --json
+```
+
+### eve fs shares {#eve-fs-shares}
+
+List active share tokens for an org.
+
+```bash
+eve fs shares --org org_xxx [--json]
+```
+
+### eve fs revoke {#eve-fs-revoke}
+
+Revoke an active share token.
+
+```bash
+eve fs revoke <token> --org org_xxx [--json]
+```
+
+### eve fs publish {#eve-fs-publish}
+
+Publish a path prefix for tokenless public access.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <id>` | string | Profile default | Organization scope |
+| `--label <text>` | string | — | Human-readable label for the published prefix |
+| `--json` | boolean | `false` | Output result as JSON |
+
+**Examples:**
+
+```bash
+eve fs publish /test/ --org org_xxx --label "Public test area"
+eve fs publish /assets/ --org org_xxx --json
+```
+
+### eve fs public-paths {#eve-fs-public-paths}
+
+List currently published public path prefixes.
+
+```bash
+eve fs public-paths --org org_xxx [--json]
 ```
 
 ---
@@ -2468,13 +2547,16 @@ eve ollama targets [--scope-kind <platform|org|project>] [--scope-id <id>] [--js
 
 ### eve ollama target {#eve-ollama-target}
 
-Manage a single target (add, rm, test).
+Manage a single target (add, rm, test, wake, pull, models).
 
 | Subcommand | Flags |
 |------------|-------|
 | `add` | `--name <name> --base-url <url> [--scope-kind <kind>] [--scope-id <id>] [--target-type <type>] [--transport-profile <profile>] [--api-key-ref <secret-ref>]` |
 | `rm` | `<target-id>` |
 | `test` | `<target-id>` |
+| `wake` | `<target-id>` |
+| `pull` | `<target-id> --model-id <id>` |
+| `models` | `<target-id>` |
 
 ### eve ollama target wake {#eve-ollama-target-wake}
 
@@ -2482,6 +2564,24 @@ Warm a target before first request.
 
 ```bash
 eve ollama target wake <target_id>
+```
+
+### eve ollama target pull {#eve-ollama-target-pull}
+
+Synchronously pull a model onto a specific target.
+
+```bash
+eve ollama target pull <target_id> --model-id llama3.1:8b
+eve ollama target pull tgt_abc --model-id qwen2.5:14b --json
+```
+
+### eve ollama target models {#eve-ollama-target-models}
+
+List models currently present on a specific target.
+
+```bash
+eve ollama target models <target_id>
+eve ollama target models <target_id> --json
 ```
 
 ### eve ollama models {#eve-ollama-models}
