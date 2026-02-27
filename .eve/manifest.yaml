@@ -1,4 +1,4 @@
-# Eve Horizon Docs - deployment manifest
+# Eve Horizon Docs – deployment manifest
 schema: eve/compose/v2
 project: evdocs
 
