@@ -45,7 +45,7 @@ pipelines:
         action: { type: release }
       - name: deploy
         depends_on: [release]
-        action: { type: deploy }
+        action: { type: deploy, env_name: staging }
 
 workflows:
   sync-docs:
