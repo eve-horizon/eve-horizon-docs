@@ -1064,19 +1064,26 @@ Simulate an inbound chat message.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--project <id>` | string | Profile default | Project ID |
+| `--project <id>` | string | — | Project ID (legacy simulate path) |
 | `--provider <name>` | string | `slack` | Provider name |
 | `--team-id <id>` | string | — | Slack team ID |
 | `--channel-id <id>` | string | — | Channel ID |
 | `--user-id <id>` | string | — | User ID |
-| `--thread-key <key>` | string | — | Thread key override |
-| `--metadata <json>` | string | — | Extra metadata JSON |
+| `--thread-id <id>` | string | — | Thread ID override (`--thread-key` alias supported) |
+| `--external-email <email>` | string | — | External identity email hint for routing |
+| `--dedupe-key <key>` | string | — | Deterministic deduplication key |
+| `--event-type <type>` | string | — | Provider event type override |
+| `--metadata <json>` | string | — | Legacy metadata JSON (`external_email` supported) |
 
 **Examples:**
 
 ```bash
-eve chat simulate --project proj_xxx --team-id T123 --text "hello"
+eve chat simulate --team-id T123 --text "hello"
+eve chat simulate --team-id T123 --text "hello" --external-email user@example.com
+eve chat simulate --project proj_xxx --team-id T123 --text "hello"   # legacy path
 ```
+
+When `--project` is set, the CLI uses the legacy project simulate endpoint. Without `--project`, it uses the gateway simulate endpoint (`/gateway/providers/simulate`).
 
 ---
 
@@ -1733,6 +1740,48 @@ eve fs public-paths --org org_xxx [--json]
 
 ---
 
+## eve github {#eve-github}
+
+Configure and verify project-level GitHub webhook integration.
+
+```
+eve github <setup|status|test> [--project <id>]
+```
+
+### eve github setup {#eve-github-setup}
+
+Generate or rotate webhook configuration for a project. Attempts to auto-create/update the webhook using `gh` when available; otherwise prints manual instructions.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project <id>` | string | Profile default | Project ID |
+| `--regenerate` | boolean | `false` | Rotate webhook secret |
+
+**Examples:**
+
+```bash
+eve github setup --project proj_xxx
+eve github setup --project proj_xxx --regenerate
+```
+
+### eve github status {#eve-github-status}
+
+Show whether GitHub webhook integration is configured for the project.
+
+```bash
+eve github status --project proj_xxx
+```
+
+### eve github test {#eve-github-test}
+
+Emit a test GitHub event for trigger validation.
+
+```bash
+eve github test --project proj_xxx
+```
+
+---
+
 ## eve harness {#eve-harness}
 
 Inspect available harnesses, variants, and auth status.
@@ -1788,6 +1837,32 @@ eve init . --branch develop
 
 ---
 
+## eve identity {#eve-identity}
+
+Identity linking helpers for external providers.
+
+```
+eve identity <link>
+```
+
+### eve identity link {#eve-identity-link}
+
+Create a link token for the current user and provider/org pair.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `[provider]` | string | — | Provider name (currently `slack`) |
+| `--org <id>` | string | Profile default | Organization ID |
+
+**Examples:**
+
+```bash
+eve identity link slack --org org_xxx
+eve identity link slack --org org_xxx --json
+```
+
+---
+
 ## eve integrations {#eve-integrations}
 
 Manage chat integrations (Slack) for an organization.
@@ -1806,7 +1881,7 @@ List integrations for an org.
 
 ### eve integrations slack {#eve-integrations-slack}
 
-Connect a Slack workspace (stub OAuth).
+Manage Slack integration setup (`connect` or `install-url`).
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -1821,6 +1896,7 @@ Connect a Slack workspace (stub OAuth).
 ```bash
 eve integrations list --org org_xxx
 eve integrations slack connect --org org_xxx --team-id T123 --token xoxb-...
+eve integrations slack install-url --org org_xxx
 ```
 
 ### eve integrations test {#eve-integrations-test}
@@ -1829,6 +1905,22 @@ Test an integration.
 
 ```bash
 eve integrations test <integration_id>
+```
+
+### eve integrations update {#eve-integrations-update}
+
+Patch integration settings with a single `key=value` entry.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `<integration_id>` | string | — | Integration ID |
+| `--org <id>` | string | Profile default | Organization ID |
+| `--setting <key=value>` | string | — | Setting update (for example `admin_channel_id=C12345`) |
+
+**Examples:**
+
+```bash
+eve integrations update int_xxx --org org_xxx --setting admin_channel_id=C12345
 ```
 
 ---
@@ -2562,8 +2654,16 @@ Manage a single target (add, rm, test, wake, pull, models).
 
 Warm a target before first request.
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `<target-id>` | string | — | Target ID |
+| `--wait <bool>` | boolean | `false` | Wait for wake completion |
+| `--timeout-ms <ms>` | number | `120000` | Max wait time in milliseconds when `--wait true` |
+
 ```bash
 eve ollama target wake <target_id>
+eve ollama target wake <target_id> --wait true
+eve ollama target wake <target_id> --wait true --timeout-ms 180000
 ```
 
 ### eve ollama target pull {#eve-ollama-target-pull}
@@ -2687,7 +2787,7 @@ eve ollama managed unpublish --canonical deepseek-r1
 
 ## eve org {#eve-org}
 
-Manage organizations. Organizations group projects and users.
+Manage organizations. Organizations group projects and users, including membership request workflows.
 
 ```
 eve org <subcommand> [options]
@@ -2758,6 +2858,29 @@ Manage organization members (list, add, remove).
 eve org members --org org_xxx
 eve org members add user@example.com --role admin --org org_xxx
 eve org members remove user_abc --org org_xxx
+```
+
+### eve org membership-requests {#eve-org-membership-requests}
+
+List, approve, or deny pending membership requests.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `list` | subcommand | — | List requests (`--status <status>` optional) |
+| `approve <request_id>` | subcommand | — | Approve request (`--role` optional, `--email` optional) |
+| `deny <request_id>` | subcommand | — | Deny request |
+| `--org <id>` | string | Profile default | Organization ID |
+| `--status <status>` | string | — | Filter list by status |
+| `--role <role>` | string | `member` | Approval role (`member` or `admin`) |
+| `--email <email>` | string | — | Optional email to attach on approval |
+
+**Examples:**
+
+```bash
+eve org membership-requests list --org org_xxx
+eve org membership-requests list --org org_xxx --status pending
+eve org membership-requests approve req_xxx --org org_xxx --role admin
+eve org membership-requests deny req_xxx --org org_xxx
 ```
 
 ---
@@ -3385,6 +3508,8 @@ eve system <subcommand> [options]
 ### eve system health {#eve-system-health}
 
 Quick health check of the API.
+
+If dependencies are degraded (for example database connectivity issues), this command can return a degraded status with diagnostic fields instead of a hard request failure.
 
 ```bash
 eve system health

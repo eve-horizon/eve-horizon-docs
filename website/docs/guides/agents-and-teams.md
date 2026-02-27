@@ -89,6 +89,10 @@ policies:
 
 For coding agents, `auto` commit with `on_success` push is the common pattern. For read-only agents (auditors, reviewers), set both to `never`.
 
+### Hard guardrails from repo policy files
+
+Policy files like `AGENTS.md` can define hard constraints that override general autonomy settings. Example: forbidding direct AWS infrastructure mutations and requiring Terraform-only changes in a separate infra repository. Treat these rules as mandatory runtime policy, even when `permission_policy` is permissive.
+
 ## Agent slugs and gateway exposure
 
 ### Slugs

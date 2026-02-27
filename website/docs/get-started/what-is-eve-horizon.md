@@ -16,6 +16,8 @@ Five ideas shape every design decision in the platform.
 
 **Agent-native.** Agents are first-class citizens, not bolted-on afterthoughts. They authenticate with the same credentials, use the same CLI commands, and operate under the same permission model as human developers. The platform is designed so that agents can do *everything* — create projects, deploy services, run jobs, review code, and ship releases.
 
+This parity includes policy guardrails: repository instructions can define non-negotiable operational rules (for example, "infrastructure changes must go through Terraform"), and both humans and agents are expected to follow them.
+
 **CLI-first.** One interface for humans and agents alike. There is no hidden admin panel or separate agent API. The `eve` CLI is the universal entry point, whether you're typing commands or an agent is executing them programmatically.
 
 **Manifest-driven.** Services, pipelines, environments, skills, and agent teams are all declared in a single `manifest.yaml`. One file describes your entire deployment shape — what gets built, how it flows through stages, and where it runs.

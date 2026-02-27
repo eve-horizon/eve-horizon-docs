@@ -37,7 +37,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 
 | Command | Description |
 |---------|-------------|
-| [eve org](/docs/reference/cli-appendix#eve-org) | Manage organizations -- list, create, update, delete, members |
+| [eve org](/docs/reference/cli-appendix#eve-org) | Manage organizations -- list, create, update, delete, members, membership requests |
 | [eve project](/docs/reference/cli-appendix#eve-project) | Manage projects -- ensure, sync manifest, status, members |
 | [eve manifest](/docs/reference/cli-appendix#eve-manifest) | Validate manifests for schema correctness and required secrets |
 | [eve profile](/docs/reference/cli-appendix#eve-profile) | Manage repo-local CLI profiles (API URL, org, project defaults) |
@@ -73,6 +73,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve event](/docs/reference/cli-appendix#eve-event) | Emit and inspect events for app integration and pipeline triggers |
+| [eve github](/docs/reference/cli-appendix#eve-github) | Configure and verify GitHub webhook integration for a project |
 | [eve webhooks](/docs/reference/cli-appendix#eve-webhooks) | Manage outbound webhook subscriptions, delivery logs, and replays |
 
 ### Agents & Chat
@@ -91,6 +92,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve auth](/docs/reference/cli-appendix#eve-auth) | Authenticate via SSH challenge (with SSH key auto-discovery), manage tokens, sync AI credentials |
+| [eve identity](/docs/reference/cli-appendix#eve-identity) | Generate identity link tokens for external providers (for example Slack) |
 | [eve access](/docs/reference/cli-appendix#eve-access) | Check permissions, manage roles and bindings, sync policy-as-code |
 | [eve secrets](/docs/reference/cli-appendix#eve-secrets) | Manage secrets at system, org, user, or project scope |
 | [eve admin](/docs/reference/cli-appendix#eve-admin) | Administrative operations — list users, invites, ingress aliases, billing, usage, service accounts, access requests |

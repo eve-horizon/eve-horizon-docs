@@ -46,15 +46,17 @@ Slack is the most common gateway provider. It uses the webhook transport model.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /gateway/providers/slack/webhook` | Generic webhook ingress |
-| `POST /integrations/slack/events` | Legacy endpoint (preserved for existing installations) |
+| `POST /gateway/providers/slack/webhook` | Slack webhook ingress |
+| `POST /gateway/providers/slack/interactive` | Slack interactive actions ingress |
 
 ### Inbound flow
 
 1. Slack sends an event to the webhook endpoint.
 2. The provider validates the request signature using `HMAC-SHA256(signing_secret, v0:timestamp:body)` against the `X-Slack-Signature` header.
-3. The integration mapping resolves `team_id` to `org_id`.
-4. The event type determines the dispatch path:
+3. Duplicate delivery is checked via Slack `event_id` (retries are acknowledged and dropped).
+4. The integration mapping resolves `team_id` to `org_id`.
+5. Identity is resolved before agent routing.
+6. The event type determines the dispatch path:
 
 | Event type | Trigger | Dispatch |
 |------------|---------|----------|
@@ -62,6 +64,20 @@ Slack is the most common gateway provider. It uses the webhook transport model.
 | `message` | Any message in a subscribed channel (no mention) | Dispatched to channel/thread listeners only |
 
 For `app_mention` events, the first word after `@eve` is tested as an agent slug. If it matches a known slug, the message routes directly to that agent's project. If no match is found, Eve falls back to the org's `default_agent_slug` and passes the full text as the command.
+
+If identity cannot be resolved, the gateway returns a provider-specific linking message instead of a generic routing failure.
+
+### Reserved command: `link`
+
+`@eve link` is intercepted before slug resolution and always starts the identity-link flow.
+
+```text
+@eve link
+```
+
+### Deduplication and timeouts
+
+Slack retries webhook deliveries when a response takes more than ~3 seconds. The gateway acknowledges quickly and performs slower work asynchronously. Retries are de-duplicated by `event_id` in a short-lived in-memory cache.
 
 ### Outbound replies
 
@@ -328,18 +344,19 @@ Test the full routing pipeline without a live provider connection:
 
 ```bash
 eve chat simulate \
-  --project <id> \
   --team-id T123 \
-  --channel-id C123 \
-  --user-id U123 \
   --text "hello" \
   --json
 ```
 
-The response returns `thread_id` and `job_ids` showing the dispatch result. This is useful for verifying that routes, slug resolution, and agent targeting work as expected before connecting a live Slack workspace.
+Use `--project` only for legacy simulation mode. Without `--project`, simulation goes through the gateway routing path and supports additional fields such as `--thread-id`, `--external-email`, `--event-type`, and `--dedupe-key`.
+
+The response includes normalized routing output (`thread_id`, `route_id`, `target`, `job_ids`, `event_id`) plus gateway metadata like `duplicate` and `immediate_reply`.
 
 :::tip
-Simulation is also available via the API at `POST /chat/simulate` for integration testing.
+Simulation is available via both API paths:
+- Legacy: `POST /projects/{project_id}/chat/simulate`
+- Gateway: `POST /gateway/providers/simulate`
 :::
 
 ## API endpoints
@@ -349,10 +366,11 @@ The gateway exposes several endpoints for chat operations:
 | Endpoint | Purpose |
 |----------|---------|
 | `POST /gateway/providers/:provider/webhook` | Generic webhook ingress |
-| `POST /integrations/slack/events` | Legacy Slack endpoint |
+| `POST /gateway/providers/slack/interactive` | Slack interactive actions ingress |
 | `GET /internal/orgs/{org_id}/agents` | Agent directory (filtered by exposure policy) |
 | `POST /internal/orgs/{org_id}/chat/route` | Slug-based routing (enforces `routable` policy) |
-| `POST /chat/simulate` | Simulate a chat message |
+| `POST /gateway/providers/simulate` | Simulate via gateway routing |
+| `POST /projects/{project_id}/chat/simulate` | Legacy project-scoped simulate API |
 | `POST /chat/listen` | Subscribe an agent to a channel/thread |
 | `POST /chat/unlisten` | Unsubscribe an agent |
 | `GET /chat/listeners` | List active listeners |

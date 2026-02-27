@@ -1,8 +1,25 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "2ef0be486aff8b5b2c276075642f5719163930f4",
-  "last_synced_at": "2026-02-26T12:38:33.822Z",
+  "last_synced_commit": "c7a3c6674fbd3fb0bce626199e57d340fbe78809",
+  "last_synced_at": "2026-02-27T16:28:16.808Z",
   "sync_log": [
+    {
+      "commit": "c7a3c6674fbd3fb0bce626199e57d340fbe78809",
+      "commit_short": "c7a3c66",
+      "synced_at": "2026-02-27T16:28:16.808Z",
+      "type": "incremental",
+      "commits_synced": 29,
+      "docs_updated": [
+        "get-started/core-concepts.md",
+        "get-started/what-is-eve-horizon.md",
+        "guides/agents-and-teams.md",
+        "guides/chat.md",
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md",
+        "agent-integration/chat-gateway.md"
+      ],
+      "summary": "Updated Slack gateway docs (dedupe, identity linking, interactive endpoint), refreshed CLI docs for new github/identity/integrations/org features, and added policy-guardrail guidance."
+    },
     {
       "commit": "2ef0be486aff8b5b2c276075642f5719163930f4",
       "commit_short": "2ef0be4",

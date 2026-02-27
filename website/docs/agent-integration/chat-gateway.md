@@ -71,8 +71,8 @@ Slack is the primary webhook-based provider. Events arrive via HTTP POST and are
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /gateway/providers/slack/webhook` | Generic provider endpoint |
-| `POST /integrations/slack/events` | Legacy endpoint (preserved for existing installations) |
+| `POST /gateway/providers/slack/webhook` | Slack webhook endpoint |
+| `POST /gateway/providers/slack/interactive` | Slack interactive actions endpoint |
 
 **Signature validation:** Slack requests are validated using the signing secret (`EVE_SLACK_SIGNING_SECRET`). The provider computes `HMAC-SHA256(signing_secret, v0:timestamp:body)` and compares against the `X-Slack-Signature` header. Invalid signatures are rejected before parsing.
 
@@ -80,8 +80,10 @@ Slack is the primary webhook-based provider. Events arrive via HTTP POST and are
 
 1. Event arrives at the webhook endpoint.
 2. Signature validated.
-3. Integration resolved: `team_id` maps to `org_id`.
-4. Event type determines the dispatch path:
+3. Duplicate check by Slack `event_id`.
+4. Integration resolved: `team_id` maps to `org_id`.
+5. Identity resolution and optional identity-link interception.
+6. Event type determines the dispatch path:
 
 | Event Type | Trigger | Dispatch |
 |------------|---------|----------|
@@ -91,6 +93,26 @@ Slack is the primary webhook-based provider. Events arrive via HTTP POST and are
 For `app_mention` events, the first word after `@eve` is tested as an agent slug. If it matches a known slug, the message routes directly to that agent's project. If no match, the org `default_agent_slug` receives the full message as the command.
 
 **Outbound:** Responses are delivered via the Slack Web API (`chat.postMessage`), threaded to the originating message.
+
+### Slack deduplication and 3-second ACK behavior
+
+Slack retries delivery when the webhook handler does not respond quickly. The gateway acknowledges requests immediately and de-duplicates retries using `event_id` in a short-lived cache.
+
+### Identity interception and reserved command
+
+Before agent routing, the gateway resolves the Slack user identity for org-scoped authorization. If identity is missing, the user receives a linking instruction.
+
+The `link` command is reserved and intercepted before slug routing:
+
+```text
+@eve link
+```
+
+This guarantees identity-link bootstrap without requiring a preconfigured `link` agent.
+
+### Slack interactive actions
+
+`POST /gateway/providers/slack/interactive` handles Slack interactive payloads (`application/x-www-form-urlencoded`, `payload=<json>`). Requests use the same Slack signature verification flow as webhook events.
 
 ### Nostr (subscription transport)
 

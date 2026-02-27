@@ -77,6 +77,8 @@ eve job create --description "Fix the login timeout bug in auth.ts"
 
 A job requires only a `description` — the natural-language prompt that tells the agent what to do. You can optionally set title, priority, labels, and scheduling hints.
 
+Repository policy files (for example `AGENTS.md` or `CLAUDE.md`) are part of runtime context and can impose hard operational constraints. Treat those constraints as mandatory for both humans and agents.
+
 ## Skills
 
 **Skills** are reusable AI capabilities defined in `SKILL.md` files following the OpenSkills format. They live in your repository under `.agents/skills/` and are loaded by the agent harness at runtime.
