@@ -294,4 +294,5 @@ From here, you can explore the platform in depth:
 - [Pipelines](/docs/guides/pipelines) — Event triggers, step types, promotion flows, and CI/CD patterns.
 - [Skills](/docs/guides/skills) — Writing custom skills, installing skill packs, and the SKILL.md format.
 - [Environments](/docs/guides/environments) — Environment types, approval gates, and PR preview environments.
-- [Secrets and Auth](/docs/guides/secrets-and-auth) — Multi-scope secret management, OAuth sync, and Git auth injection.
+- [Authentication & Identity](/docs/guides/authentication) — Login methods, organizations, roles, and user management.
+- [Secrets & Credentials](/docs/guides/secrets) — Multi-scope secret management, manifest interpolation, and harness credentials.

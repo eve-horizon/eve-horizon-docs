@@ -422,4 +422,6 @@ For the k3d stack, additional configuration lives in k8s manifests:
 
 ## What's next?
 
-Manage secrets and authentication: [Secrets & Auth](./secrets-and-auth.md)
+Manage secrets for deployments: [Secrets & Credentials](./secrets.md)
+
+Understand login and identity: [Authentication & Identity](./authentication.md)
