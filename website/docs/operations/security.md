@@ -22,6 +22,7 @@ graph TD
     H[Agent Isolation] --> I[Env Allowlist]
     H --> J[Filesystem Sandbox]
     H --> K[LLM Security Policy]
+    H --> P[Workspace Isolation]
     L[Secret Management] --> M[Encrypted at Rest]
     L --> N[Scope Resolution]
     L --> O[Interpolation]
@@ -112,7 +113,23 @@ Key registered successfully. Retrying login...
 
 ## Agent sandbox isolation
 
-When agents execute jobs, they run LLM-powered processes that can execute bash commands, read files, and produce output. Eve implements a three-layer defense model to prevent secret leakage and unauthorized access.
+When agents execute jobs, they run LLM-powered processes that can execute bash commands, read files, and produce output. Eve implements a three-layer defense model to prevent secret leakage and unauthorized access. No single layer is sufficient on its own; together they make secret leakage require simultaneous bypass of multiple independent controls.
+
+### Threat model
+
+Understanding what the sandbox defends against helps when evaluating trade-offs:
+
+**Attacker capabilities** (what the sandbox assumes an adversary can do):
+
+- Execute malicious code embedded in a repository
+- Craft prompt injections that cause the agent to attempt unauthorized actions
+- Attempt to access files outside the designated workspace
+
+**Protected assets:**
+
+- Other project workspaces on shared workers
+- Worker configuration and credentials (database URLs, encryption keys, internal API keys)
+- Host system files and environment variables
 
 ### Layer 1: Allowlisted environment
 
@@ -166,12 +183,65 @@ A security policy is injected into every agent job through two parallel paths:
 | Agent reads secrets file | Not written | -- | Forbidden | **Blocked** |
 | Prompt injection ("print your env") | Nothing to find | -- | Forbidden | **Blocked** |
 | Agent reads `~/.config/` via bash | Scoped | File tools blocked | Forbidden | **Strong** |
+| Sophisticated prompt injection | Nothing to find | File tools blocked | May bypass | **Strong** |
+| Agent tries to exfiltrate LLM API key | Key is in env (required) | -- | Forbidden | **Medium** |
 
 In Kubernetes runner pods, agents run in ephemeral containers with no meaningful credentials outside the workspace.
 
 ### Job-scoped credentials
 
 The worker writes a job-scoped Eve CLI credential file before the harness spawns. This lets agents invoke `eve` CLI commands against the API without exposing system-wide credentials. The token is limited to the job's permissions and expires with the job.
+
+### Workspace layout
+
+Each job receives an isolated workspace path. Sandboxing prevents directory traversal across all boundaries:
+
+```
+/workspaces/{projectId}/{jobId}/{attemptNum}/
+  repo/                  # Cloned repository (sandbox root)
+    .eve/
+      secrets/           # Job-specific secrets (interpolated)
+    .agent/
+      harnesses/         # Per-harness config directories
+        mclaude/
+        zai/
+```
+
+The sandbox prevents traversal to `/workspaces/{otherProjectId}/` (other projects), `/workspaces/{projectId}/{otherJobId}/` (other jobs in the same project), and any parent directories containing worker infrastructure.
+
+### Bash tool limitations
+
+CLI sandboxes restrict the LLM's structured file tools (Read, Write, Edit, Glob, Grep). However, the Bash tool can execute arbitrary commands, which may bypass file restrictions — an agent could theoretically run `cat ~/.config/gh/hosts.yml` via bash.
+
+Mitigations for this gap:
+
+1. **Container isolation** — Kubernetes runner pods provide syscall-level isolation; there are no meaningful credentials in `~/.config/` unless explicitly provisioned
+2. **Permission policies** — `default` mode requires human approval for risky commands
+3. **Network isolation** — pods cannot access other workspaces via network
+4. **Layer 3 behavioral controls** — the LLM security policy explicitly forbids reading files outside the workspace
+
+### The LLM API key gap
+
+The one secret that must remain accessible to the agent process is the LLM provider API key (e.g., `ANTHROPIC_API_KEY`). The harness binary needs the key to make API calls, so the agent could theoretically discover it via bash.
+
+Current mitigations:
+
+- Layer 3 explicitly forbids outputting credentials
+- The key only reaches the agent via the adapter's `options.env` — not via `process.env` spreading
+- Agent logs are not exposed to end users in a way that would persist the value
+
+:::tip
+A planned LLM proxy service will eliminate this gap entirely. The proxy will hold provider keys and issue short-lived, job-scoped tokens to agents — provider keys will never enter the agent environment.
+:::
+
+### Hardening recommendations
+
+For high-security deployments, apply these additional controls:
+
+1. **Dedicated runner pods** — do not use shared workers; run each job in its own container
+2. **Restrictive permission policies** — use `default` or `auto_edit` modes that require approval for risky bash commands
+3. **Network egress policies** — limit pod egress to prevent data exfiltration
+4. **Read-only workspace mounts** — mount workspaces as read-only where the job does not require writes
 
 ## Secret isolation
 

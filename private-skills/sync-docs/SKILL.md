@@ -79,6 +79,18 @@ Read `.sync-state.json` from the repo root:
 
 If `.sync-state.json` is missing or unreadable, create it with `last_synced_commit: null`.
 
+Read `.sync-map.json` and validate `page_mappings` targets:
+
+```
+For each page in page_mappings:
+  Check if website/docs/<page> exists on disk
+  If not: warn "Stale mapping: <page> no longer exists — remove or update"
+```
+
+If any stale mappings are found, list them all and then **stop**. Stale mappings
+must be fixed before syncing — otherwise the worker would try to update a file
+that doesn't exist.
+
 If `last_synced_commit` is null:
 1. Fetch the current eve-horizon HEAD SHA via API:
    ```bash
@@ -151,6 +163,14 @@ Filter the changed files list against `watch_paths`:
 - A file matches if its path starts with any entry in `watch_paths`
 - Keep only matching files
 
+After filtering, classify the matched files by their `status` from the Compare response:
+- If any file has `status: "added"`, flag it as a new source file requiring a mapping decision
+- Report: "N new source files detected — check if page_mappings need updating"
+- List each new file with its path
+
+This does not block the sync — it's an early warning that the sync map may need
+new entries added.
+
 If no watched files changed: report "no relevant changes" and **stop**.
 
 ---
@@ -172,8 +192,21 @@ Build a work list of affected docs pages. Each work item contains:
 
 Report the plan: "N pages need updating based on M changed source files"
 
-If the work list is empty (changed files were in watch_paths but don't map to
-any page): report "changes detected but no page mappings affected" and **stop**.
+After building the work list, also build a **gap list**: changed source files that
+matched `watch_paths` but don't appear in any `page_mappings.sources` entry.
+
+If the gap list is non-empty:
+1. Log each unmapped file with its change type (added/modified/removed) and line count
+   (use `changes` or `additions + deletions` from the Compare response)
+2. Report: "N source files changed but have no page mapping — content will not be synced"
+3. Continue with the work list — unmapped files do not block the sync
+
+If the work list is empty but the gap list is non-empty: report the gap list and
+**stop**. There's nothing to sync, but the gaps are now visible for humans to act on.
+
+If both the work list and gap list are empty (changed files were in watch_paths but
+don't map to any page and no gaps detected): report "changes detected but no page
+mappings affected" and **stop**.
 
 ---
 
@@ -257,9 +290,15 @@ After all pages are updated:
        "type": "incremental",
        "commits_synced": <number of commits in compare>,
        "docs_updated": ["<list of updated page paths>"],
+       "unmapped_sources": [
+         "<source path> (<change type>, <line count> lines)"
+       ],
        "summary": "<one-line summary of what changed>"
      }
      ```
+   - `unmapped_sources` contains the gap list from Phase 3 (changed files that
+     matched `watch_paths` but had no `page_mappings` entry). If the gap list
+     was empty, set `unmapped_sources` to an empty array `[]`.
    - Keep only the last 20 entries in `sync_log`
 
 4. Write the updated `.sync-state.json`

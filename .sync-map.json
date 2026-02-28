@@ -42,7 +42,7 @@
       "description": "Pipeline and workflow setup"
     },
     "guides/environments.md": {
-      "sources": ["docs/system/deployment.md", "docs/system/deploy-polling.md"],
+      "sources": ["docs/system/deployment.md", "docs/system/deploy-polling.md", "docs/system/pr-preview-environments.md"],
       "description": "Environment management"
     },
     "guides/skills.md": {
@@ -50,11 +50,11 @@
       "description": "Skills authoring and management"
     },
     "guides/agents-and-teams.md": {
-      "sources": ["docs/system/agents.md", "AGENTS.md"],
+      "sources": ["docs/system/agents.md", "AGENTS.md", "docs/system/agent-runtime.md", "docs/system/inference-ollama.md"],
       "description": "Agent and team configuration"
     },
     "guides/chat.md": {
-      "sources": ["docs/system/chat-routing.md", "docs/system/chat-gateway.md"],
+      "sources": ["docs/system/chat-routing.md", "docs/system/chat-gateway.md", "docs/system/integrations.md"],
       "description": "Chat routing and gateway"
     },
     "guides/local-development.md": {
@@ -66,12 +66,20 @@
       "description": "Designing agentic applications"
     },
     "guides/fullstack-app-design.md": {
-      "sources": ["docs/system/manifest.md", "docs/system/deployment.md", "docs/system/unified-architecture.md"],
+      "sources": ["docs/system/manifest.md", "docs/system/deployment.md", "docs/system/unified-architecture.md", "docs/system/app-service-eve-api-access.md"],
       "description": "Full-stack application architecture"
     },
-    "guides/secrets-and-auth.md": {
-      "sources": ["docs/system/secrets.md", "docs/system/auth.md", "docs/system/identity-providers.md"],
-      "description": "Secrets and authentication"
+    "guides/secrets.md": {
+      "sources": ["docs/system/secrets.md"],
+      "description": "Secrets management"
+    },
+    "guides/authentication.md": {
+      "sources": ["docs/system/auth.md", "docs/system/identity-providers.md", "docs/system/eve-auth-sdk.md", "docs/system/app-sso-integration.md"],
+      "description": "Authentication, SSO, and identity providers"
+    },
+    "guides/storage.md": {
+      "sources": ["docs/system/object-store-and-org-filesystem.md"],
+      "description": "Object store, org filesystem, and storage access"
     },
     "reference/cli-commands.md": {
       "sources": ["packages/cli/src/commands/"],
@@ -86,7 +94,7 @@
       "description": "Manifest schema reference"
     },
     "reference/job-api.md": {
-      "sources": ["docs/system/job-api.md", "docs/system/job-context.md", "docs/system/job-control-signals.md"],
+      "sources": ["docs/system/job-api.md", "docs/system/job-context.md", "docs/system/job-control-signals.md", "docs/system/job-git-controls.md"],
       "description": "Job API reference"
     },
     "reference/events-and-webhooks.md": {
@@ -110,7 +118,7 @@
       "description": "Environment gating reference"
     },
     "reference/harnesses-and-workers.md": {
-      "sources": ["docs/system/harness-execution.md", "docs/system/harness-adapters.md", "docs/system/harness-policy.md"],
+      "sources": ["docs/system/harness-execution.md", "docs/system/harness-adapters.md", "docs/system/harness-policy.md", "docs/system/worker-types.md"],
       "description": "Harness and worker reference"
     },
     "reference/openapi.md": {
@@ -118,7 +126,7 @@
       "description": "OpenAPI spec (generated, not synced)"
     },
     "agent-integration/agent-native-design.md": {
-      "sources": ["docs/ideas/agent-native-design.md", "docs/ideas/platform-primitives-for-agentic-apps.md"],
+      "sources": ["docs/ideas/agent-native-design.md", "docs/ideas/platform-primitives-for-agentic-apps.md", "docs/system/agent-app-api-access.md"],
       "description": "Agent-native design philosophy"
     },
     "agent-integration/skills-system.md": {
@@ -154,7 +162,7 @@
       "description": "Database operations"
     },
     "operations/security.md": {
-      "sources": ["docs/system/auth.md", "docs/system/identity-providers.md"],
+      "sources": ["docs/system/auth.md", "docs/system/identity-providers.md", "docs/system/agent-sandbox-security.md", "docs/system/agent-secret-isolation.md"],
       "description": "Security operations"
     },
     "operations/troubleshooting.md": {

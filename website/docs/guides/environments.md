@@ -296,6 +296,95 @@ eve job create \
 
 This ensures only one backup job runs at a time, even though `db-backup` is not a traditional deploy environment.
 
+## PR preview environments
+
+Preview environments give reviewers a live deployment for every pull request. When a PR is opened or updated, Eve creates a temporary environment, deploys the changes, and provides a stable URL. When the PR is closed, the environment is automatically cleaned up.
+
+### How preview environments work
+
+A preview environment is a standard Eve environment with `kind: preview` and a name derived from the PR number. Eve handles the full lifecycle:
+
+1. **Create** — A new environment named `pr-<number>` is provisioned when the PR triggers a deploy pipeline
+2. **Deploy** — The changes are built and deployed to the preview environment
+3. **Access** — Reviewers visit the preview URL or call the API with an auth token
+4. **Cleanup** — The environment is deleted when the PR is closed or merged
+
+Preview environments follow a consistent naming pattern:
+
+| Component | Format | Example |
+|-----------|--------|---------|
+| Environment name | `pr-<number>` | `pr-123` |
+| Ingress URL | `{service}.{project}-{env}.{domain}` | `web.my-project-pr-123.example.com` |
+
+### Finding the preview URL
+
+After the deploy pipeline completes, find the preview URL in any of these places:
+
+```bash
+# From the pipeline run output
+eve pipeline show-run deploy-pr prun_xxx
+
+# From the job result
+eve job result MyProj-abc123
+
+# From the environment list
+eve env list --project proj_xxx
+```
+
+The `eve env list` output shows ingress details and PR metadata:
+
+```
+Environment: pr-123 (persistent)
+  Ingress: web.my-project-pr-123.example.com
+  Status: ready
+  Labels:
+    pr_number: 123
+    pr_branch: feat/dashboard
+    pr_sha: abc123def456
+    pr_url: https://github.com/org/repo/pull/123
+```
+
+### Sharing access with reviewers
+
+Preview environments are authenticated. To share access, generate a short-lived token and send it along with the preview URL:
+
+```bash
+# Generate an access token (valid for your login session, typically 24 hours)
+eve auth token
+
+# Copy to clipboard (macOS)
+eve auth token | pbcopy
+```
+
+Reviewers use the token for API access:
+
+```bash
+TOKEN="<token-from-developer>"
+
+curl -H "Authorization: Bearer $TOKEN" \
+     https://web.my-project-pr-123.example.com/api/endpoint
+```
+
+For browser-based applications, reviewers visit the preview URL and paste the token when prompted for authentication.
+
+:::tip
+Reviewers who have their own Eve credentials can generate their own tokens with `eve auth token` instead of using a shared token.
+:::
+
+:::warning
+Treat access tokens like passwords. They carry your user permissions and are valid until your session expires. Revoke access early by running `eve auth logout`, which invalidates all tokens issued to your profile.
+:::
+
+### Preview environment cleanup
+
+Preview environments are cleaned up automatically when the PR is closed. You can also delete one manually:
+
+```bash
+eve env delete pr-123
+```
+
+Deleting a preview environment invalidates all tokens scoped to that environment's resources.
+
 ## Environment CLI
 
 The `eve env` command group manages all environment operations.

@@ -38,6 +38,111 @@ Each external workspace maps to an Eve organization. When a Slack workspace or N
 
 The `resolveIdentity` method maps an external user (Slack user ID, Nostr pubkey) to an Eve identity. External identities are stored in the `external_identities` table and linked to Eve users and orgs for permission checks and audit trails.
 
+Identity resolution proceeds through three tiers, evaluated in order. The first tier that produces a match short-circuits the rest.
+
+#### Tier 1: Email auto-match
+
+The gateway fetches the external user's email (e.g., via Slack's `users.info` API) and checks whether an Eve user with that email exists and is a member of the integration's org. If both conditions are met, the external identity is automatically bound to the Eve user — no action required.
+
+```
+Slack user (U123) → email → user@company.com → Eve user (usr_xxx) → org member? → BOUND
+```
+
+This is the zero-friction path for teams where Slack and Eve share the same email domain.
+
+#### Tier 2: Self-service CLI link
+
+An existing Eve user who was not auto-matched (e.g., different email on Slack vs. Eve) can link their identity manually:
+
+```bash
+eve identity link slack --org <org_id>
+```
+
+This generates a one-time link token. Send the token to `@eve` in Slack:
+
+```text
+@eve link <token>
+```
+
+The gateway validates the token, binds the external identity, and confirms in-channel.
+
+#### Tier 3: Admin approval
+
+When neither Tier 1 nor Tier 2 resolves the user, the platform creates a **membership request**. This is the fallback for completely unknown users — someone in a Slack workspace who has no Eve account.
+
+Org admins can act on requests through:
+
+- **CLI**: `eve org membership-requests list --org <org_id>`
+- **Slack interactive buttons**: If `admin_channel_id` is configured on the integration, a Block Kit message is posted to the admin channel with Approve/Deny buttons
+
+On approval, the platform creates an Eve user (if needed), adds org membership, binds the external identity, and notifies the user in Slack. On denial, the request is closed and the user is informed.
+
+#### Resolution decision table
+
+| Slack user has Eve email? | Eve user is org member? | Result |
+|---------------------------|------------------------|--------|
+| Yes | Yes | Tier 1: auto-bind |
+| Yes | No | Tier 3: membership request (user exists but not a member) |
+| No / unknown | — | Tier 2 if they self-link, otherwise Tier 3 |
+
+:::tip
+For most teams, Tier 1 handles identity resolution automatically. You only need Tier 2 or Tier 3 when email addresses differ between Slack and Eve, or when someone outside your org wants access.
+:::
+
+## Membership requests
+
+When identity resolution falls through to Tier 3, Eve creates a membership request that tracks the user through an approval workflow.
+
+### Lifecycle
+
+```mermaid
+graph TD
+    A[Unknown user messages @eve] --> B[External identity created]
+    B --> C[Membership request created — pending]
+    C --> D[Admin notified via Slack + CLI]
+    D --> E{Admin decision}
+    E -->|Approve| F[Eve user created]
+    F --> G[Org membership added]
+    G --> H[External identity bound]
+    H --> I[User notified in Slack]
+    E -->|Deny| J[Request closed — user informed]
+```
+
+### Request states
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Awaiting admin decision |
+| `approved` | Admin approved; user created and identity bound |
+| `denied` | Admin denied; no access granted |
+
+### Managing requests
+
+```bash
+# List pending requests
+eve org membership-requests list --org <org_id>
+
+# Approve (creates user + membership + identity binding)
+eve org membership-requests approve <request_id> --org <org_id>
+
+# Deny
+eve org membership-requests deny <request_id> --org <org_id>
+```
+
+:::warning
+Membership requests are org-scoped. If a user has an Eve account but is not a member of the integration's org, they will receive a membership request rather than an auto-bind — even if their email matches.
+:::
+
+### External identity lifecycle
+
+External identities track the binding between a provider user and an Eve user. Understanding their lifecycle helps when debugging identity issues:
+
+1. **Created** — when a provider user is first seen (e.g., first Slack message to `@eve`). The `eve_user_id` field is null (unresolved).
+2. **Bound** — when identity resolution succeeds through any tier. The `eve_user_id` is set, and subsequent messages skip identity resolution entirely.
+3. **Unbound** — if the linked Eve user is deleted, the identity returns to unresolved state.
+
+Once bound, the external identity serves as a fast lookup for all future messages from that user — no resolution tiers are evaluated.
+
 ## Slack integration
 
 Slack is the most common gateway provider. It uses the webhook transport model.
@@ -67,12 +172,51 @@ For `app_mention` events, the first word after `@eve` is tested as an agent slug
 
 If identity cannot be resolved, the gateway returns a provider-specific linking message instead of a generic routing failure.
 
+### Connecting a Slack workspace
+
+```bash
+# Connect a Slack workspace to an org
+eve integrations slack connect \
+  --org <org_id> \
+  --team-id <T-ID from Slack> \
+  --token xoxb-...
+
+# Verify the connection
+eve integrations list --org <org_id>
+eve integrations test <integration_id> --org <org_id>
+```
+
+Subscribe to these bot events in the Slack App configuration:
+
+| Event | Purpose |
+|-------|---------|
+| `app_mention` | `@eve` commands |
+| `message.channels` | Listener dispatch in public channels |
+| `message.groups` | Listener dispatch in private channels |
+| `message.im` | Direct messages to the bot |
+
+### Integration settings
+
+Each integration stores authentication tokens and configuration separately:
+
+**`tokens_json`** holds sensitive credentials (bot token, bot user ID, app ID). These are never exposed in list responses.
+
+**`settings_json`** holds non-sensitive configuration. The key setting is `admin_channel_id`, which controls where membership request notifications are posted:
+
+```bash
+# Set the admin notification channel for membership approvals
+eve integrations update <integration_id> --org <org_id> \
+  --setting admin_channel_id=C-ADMIN-CHANNEL
+```
+
+When `admin_channel_id` is not set, membership notifications are suppressed and admins must use the CLI to manage requests.
+
 ### Reserved command: `link`
 
-`@eve link` is intercepted before slug resolution and always starts the identity-link flow.
+`@eve link` is intercepted before slug resolution and always starts the [Tier 2 identity-link flow](#tier-2-self-service-cli-link).
 
 ```text
-@eve link
+@eve link <token>
 ```
 
 ### Deduplication and timeouts

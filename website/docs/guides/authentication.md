@@ -369,6 +369,224 @@ The flow mirrors SSH auth: Eve issues a challenge, you sign it with your Nostr p
 
 To create invites targeting Nostr identities, see [Identity-targeted invites](#identity-targeted-invites) above.
 
+## Adding Eve auth to your app
+
+Everything above covers authenticating *yourself* with the Eve platform. This section covers the other direction: adding Eve SSO login to an app you deploy on Eve.
+
+Eve provides two SDK packages that handle token verification, session management, and login UI so you don't have to build it from scratch.
+
+| Package | Runtime | What it does |
+|---------|---------|-------------|
+| `@eve/auth` | Node.js (Express / NestJS) | Verify JWTs, check org membership, serve auth config |
+| `@eve/auth-react` | React | Session bootstrap, login gate, auth hooks |
+
+### Backend setup
+
+Install the backend package:
+
+```bash
+npm install @eve/auth
+```
+
+Then wire up three pieces of middleware:
+
+```typescript
+import { eveUserAuth, eveAuthGuard, eveAuthConfig } from '@eve/auth';
+
+// 1. Parse and verify tokens on every request (non-blocking)
+app.use(eveUserAuth());
+
+// 2. Serve auth discovery config for the frontend
+app.get('/auth/config', eveAuthConfig());
+
+// 3. Protect routes that require a logged-in user
+app.get('/auth/me', eveAuthGuard(), (req, res) => {
+  res.json(req.eveUser);
+});
+
+// Protect an entire route tree
+app.use('/api', eveAuthGuard());
+```
+
+`eveUserAuth()` is **non-blocking** by design. It extracts the Bearer token, verifies it against Eve's JWKS endpoint, checks org membership, and attaches `req.eveUser` if everything checks out. If the token is missing or invalid, the request passes through with `req.eveUser` unset -- this lets you serve both public and protected routes from the same app. Use `eveAuthGuard()` on routes where authentication is required.
+
+:::tip
+For NestJS apps, use the same Express middleware in `main.ts` and wrap `eveAuthGuard()` in a thin NestJS guard:
+
+```typescript
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+
+@Injectable()
+export class EveGuard implements CanActivate {
+  canActivate(ctx: ExecutionContext): boolean {
+    return !!ctx.switchToHttp().getRequest().eveUser;
+  }
+}
+```
+:::
+
+### Frontend setup
+
+Install the React package:
+
+```bash
+npm install @eve/auth-react
+```
+
+Wrap your app in the auth provider and login gate:
+
+```tsx
+import { EveAuthProvider, EveLoginGate } from '@eve/auth-react';
+
+function App() {
+  return (
+    <EveAuthProvider apiUrl="/api">
+      <EveLoginGate>
+        <ProtectedApp />
+      </EveLoginGate>
+    </EveAuthProvider>
+  );
+}
+```
+
+`EveAuthProvider` handles the full session bootstrap sequence on mount:
+
+1. Checks `sessionStorage` for a cached token and validates it.
+2. If no cached token, fetches `/auth/config` from your backend to discover the SSO URL.
+3. Probes the SSO broker's `/session` endpoint (using the root-domain cookie) to get a fresh token.
+4. If no SSO session exists, renders the login form.
+
+`EveLoginGate` renders your app when the user is authenticated, and shows a built-in login form otherwise. You can customize both the login and loading states:
+
+```tsx
+<EveLoginGate
+  fallback={<CustomLoginPage />}
+  loadingFallback={<Spinner />}
+>
+  <ProtectedApp />
+</EveLoginGate>
+```
+
+### Using auth state in components
+
+The `useEveAuth` hook gives you the current user and login/logout actions:
+
+```tsx
+import { useEveAuth, createEveClient } from '@eve/auth-react';
+
+function Dashboard() {
+  const { user, logout } = useEveAuth();
+
+  return (
+    <div>
+      <p>Logged in as {user.email} ({user.role})</p>
+      <button onClick={logout}>Log out</button>
+    </div>
+  );
+}
+
+// For API calls, createEveClient auto-injects the Bearer token
+const client = createEveClient('/api');
+const res = await client.fetch('/data');
+```
+
+The `user` object has four fields: `id`, `email`, `orgId`, and `role`.
+
+### Token verification strategies
+
+The backend middleware supports two verification strategies:
+
+| Strategy | How it works | Latency | Best for |
+|----------|-------------|---------|----------|
+| `local` (default) | Fetches Eve's JWKS keys and caches them for 15 minutes | Fast | User-facing apps |
+| `remote` | Calls Eve's `/auth/token/verify` on every request | ~50ms per request | When you need immediate revocation |
+
+```typescript
+// Use remote verification for sensitive endpoints
+app.use(eveUserAuth({ strategy: 'remote' }));
+```
+
+The `local` strategy means membership changes (like removing a user from an org) can take up to 15 minutes to take effect. With the default 1-day token TTL, this is usually fine. Use `remote` when you need stronger guarantees.
+
+### Agent and job token verification
+
+If your app receives requests from Eve agent jobs rather than human users, use `eveAuthMiddleware` instead:
+
+```typescript
+import { eveAuthMiddleware } from '@eve/auth';
+
+// Blocking: returns 401 immediately on any auth failure
+app.use('/agent-api', eveAuthMiddleware());
+
+app.post('/agent-api/callback', (req, res) => {
+  // req.agent contains the full EveTokenClaims
+  console.log(req.agent.job_id, req.agent.permissions);
+});
+```
+
+Unlike `eveUserAuth`, this middleware is **blocking** -- it returns 401 on any verification failure. It defaults to `remote` strategy since agent tokens often need immediate validity checks.
+
+### Environment variables
+
+When you deploy an app to Eve, the platform automatically injects these environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `EVE_API_URL` | Internal API URL for server-to-server calls |
+| `EVE_PUBLIC_API_URL` | Public-facing API URL |
+| `EVE_SSO_URL` | SSO broker URL |
+| `EVE_ORG_ID` | Organization ID |
+| `EVE_PROJECT_ID` | Project ID |
+| `EVE_ENV_NAME` | Environment name |
+
+The `@eve/auth` middleware reads `EVE_API_URL`, `EVE_ORG_ID`, and `EVE_SSO_URL` automatically. You don't need to pass them as options unless you want to override the defaults (for example, in local development).
+
+You can also reference these in your manifest using interpolation syntax:
+
+```yaml
+services:
+  web:
+    environment:
+      NEXT_PUBLIC_SSO_URL: "${SSO_URL}"
+```
+
+:::warning
+For local development outside Eve, set `EVE_API_URL`, `EVE_ORG_ID`, and `EVE_SSO_URL` as environment variables manually. Without them, the middleware won't know where to verify tokens or which org to check membership against.
+:::
+
+### Token lifecycle
+
+The frontend SDK manages three tokens transparently:
+
+| Token | Storage | TTL | What happens when it expires |
+|-------|---------|-----|------------------------------|
+| Eve RS256 access token | `sessionStorage` | 1 day (default) | SDK re-probes the SSO session |
+| SSO refresh cookie | httpOnly cookie (root domain) | 30 days | GoTrue refreshes it |
+| GoTrue refresh token | httpOnly cookie (SSO broker) | 30 days | User sees the login form |
+
+You don't need to write any token refresh logic. When the access token expires, `EveAuthProvider` automatically re-probes the SSO broker. If the SSO session is also expired, the user is shown the login form.
+
+### SSE authentication
+
+The middleware supports token authentication via query parameter for Server-Sent Events connections where you can't set custom headers:
+
+```
+GET /api/events?token=eyJ...
+```
+
+### Token paste mode
+
+For local development or headless environments where SSO redirect isn't available, users can paste a token directly:
+
+```bash
+# Get a token from the CLI
+eve auth token
+
+# Paste it into the login form's "Token" tab
+```
+
+The built-in `EveLoginForm` component includes both SSO and token paste modes.
+
 ## Troubleshooting
 
 | Problem | Fix |

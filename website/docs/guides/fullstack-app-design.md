@@ -163,6 +163,89 @@ const publicApiUrl = process.env.EVE_PUBLIC_API_URL;
 
 Services can override these by defining them explicitly in their `environment` section, but in most cases the injected values are what you want.
 
+## Calling the Eve API from your services
+
+Applications deployed on Eve can call the Eve REST API from their backend services -- creating jobs, triggering deploys, querying platform state, and more. This turns your application into an active participant in the Eve ecosystem rather than a passive deployment target.
+
+### Set up a service account
+
+Eve does not yet mint service-scoped tokens. The working approach is to create a dedicated user, mint a long-lived token, and store it as a project secret:
+
+```bash
+# 1. Create a dedicated app user
+eve admin invite --email app-bot@example.com --org org_xxx --role member
+
+# 2. Mint a 90-day token
+eve auth mint --email app-bot@example.com --org org_xxx --ttl 90
+
+# 3. Store tokens per environment
+eve secrets set EVE_API_TOKEN_STAGING <token> --project proj_xxx
+eve secrets set EVE_API_TOKEN_PROD <token> --project proj_xxx
+```
+
+:::warning
+These are user tokens with role-based permissions, not scoped service tokens. There is no environment restriction enforced at the API level today. Use per-environment secrets and inject each token only into its target environment.
+:::
+
+### Inject the token via the manifest
+
+Use environment overrides so each environment receives only its own token:
+
+```yaml
+environments:
+  staging:
+    overrides:
+      services:
+        api:
+          environment:
+            EVE_API_TOKEN: ${secret.EVE_API_TOKEN_STAGING}
+  production:
+    overrides:
+      services:
+        api:
+          environment:
+            EVE_API_TOKEN: ${secret.EVE_API_TOKEN_PROD}
+```
+
+The platform already injects `EVE_API_URL` and `EVE_PROJECT_ID`, so your service code only needs to read the token from the environment.
+
+### Make API calls
+
+With the token injected, your service can call any Eve API endpoint. Here are common patterns:
+
+```bash
+# Create a job from your backend
+curl -X POST "$EVE_API_URL/projects/$EVE_PROJECT_ID/jobs" \
+  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Run a code change job from the app",
+    "env_name": "'"$EVE_ENV_NAME"'"
+  }'
+
+# Follow job logs (SSE stream)
+curl -N \
+  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  "$EVE_API_URL/jobs/<job-id>/stream"
+
+# Trigger a deploy
+curl -X POST \
+  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  "$EVE_API_URL/projects/$EVE_PROJECT_ID/envs/$EVE_ENV_NAME/deploy" \
+  -d '{"ref":"main"}'
+```
+
+Use `EVE_API_URL` for all server-side calls (internal cluster networking). Use `EVE_PUBLIC_API_URL` only for code running in the browser or outside the cluster.
+
+### Token rotation
+
+Tokens expire after the configured TTL (up to 90 days). To rotate:
+
+1. Re-mint with `eve auth mint --email app-bot@example.com --org org_xxx --ttl 90`
+2. Update the project secret with `eve secrets set`
+3. Redeploy the service to pick up the new value
+
 ## Database design
 
 ### Provisioning
@@ -580,6 +663,13 @@ Use this checklist when designing a new fullstack app or evaluating an existing 
 - [ ] Each environment linked to a pipeline
 - [ ] Promotion workflow defined (build once, deploy many)
 - [ ] Recovery procedure known (diagnose -> rollback -> reset)
+
+**Eve API access (if needed):**
+- [ ] Dedicated service account user created
+- [ ] Long-lived token minted and stored per-environment
+- [ ] Token injected via environment overrides (not globally)
+- [ ] Service uses `EVE_API_URL` for server-side calls
+- [ ] Token rotation schedule established
 
 **Secrets:**
 - [ ] All secrets set per-project via `eve secrets set`

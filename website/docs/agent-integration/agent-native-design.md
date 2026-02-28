@@ -149,15 +149,109 @@ services:
         spec_url: /openapi.json
 ```
 
-On deploy, Eve fetches the OpenAPI spec and registers it. Agents then discover and call the API using the CLI:
+On deploy, Eve fetches your OpenAPI spec from `spec_url` and registers it. Agents then discover and call the API using the CLI:
 
 ```bash
-eve api list                      # List available APIs in the project
+eve api list                      # List all APIs in the project
 eve api spec coordinator          # Read the OpenAPI spec
+eve api examples coordinator      # Get curl examples with auth
 eve api call coordinator GET /api/nodes   # Call with automatic auth
 ```
 
 Authentication is handled automatically via `EVE_JOB_TOKEN`. The agent never manages credentials directly.
+
+#### Calling app APIs
+
+`eve api call` supports all HTTP methods. Auth headers are injected automatically:
+
+```bash
+# Read operations
+eve api call coordinator GET /api/projects/xxx/nodes
+
+# Write operations
+eve api call coordinator POST /api/nodes \
+  --json '{"type":"requirement","title":"User can reset password"}'
+
+# Update operations
+eve api call coordinator PATCH /api/nodes/node_yyy \
+  --json '{"description":"Must also support SMS reset"}'
+
+# Debug: see the curl command without executing
+eve api call coordinator GET /api/nodes --print-curl
+```
+
+#### Automatic API instructions
+
+When creating a job that should interact with app APIs, pass `--with-apis` to inject discovery instructions into the job description automatically:
+
+```bash
+eve job create \
+  --description "Triage intake item INTAKE-xxx" \
+  --with-apis coordinator
+```
+
+The agent receives an instruction block telling it which APIs are available, how to call them, and that auth is handled. Pass multiple APIs with comma separation: `--with-apis coordinator,analytics`.
+
+### Verifying agent tokens
+
+When an agent calls your app's API, the request includes an `Authorization: Bearer` header with a job token. You have three options for verification.
+
+**Remote verification (simplest)** -- Call the Eve API to validate the token with no key management:
+
+```typescript
+import { verifyEveTokenRemote, eveAuthMiddleware } from '@eve/auth';
+
+// One-liner middleware for Express:
+app.use('/api', eveAuthMiddleware({ strategy: 'remote' }));
+
+// Or verify manually:
+const claims = await verifyEveTokenRemote(token);
+// claims.project_id, claims.job_id, claims.permissions
+```
+
+The middleware calls `GET $EVE_API_URL/auth/token/verify` with the token and attaches the claims to `req.agent`.
+
+**Local JWKS verification (faster)** -- Fetch Eve's public keys once and verify tokens locally:
+
+```typescript
+import { verifyEveToken, eveAuthMiddleware } from '@eve/auth';
+
+// Express middleware with local verification:
+app.use('/api', eveAuthMiddleware({ strategy: 'local' }));
+
+// Or verify manually:
+const claims = await verifyEveToken(token);
+```
+
+JWKS is fetched from `$EVE_API_URL/.well-known/jwks.json` and cached for 15 minutes.
+
+**Standard JWT library** -- The token is a standard RS256 JWT. Any JWT library can verify it against the JWKS endpoint.
+
+Token claims include:
+
+| Claim | Description |
+|-------|-------------|
+| `type` | `"job"` for agent tokens |
+| `user_id` | The user who created the job |
+| `org_id` | Organization ID |
+| `project_id` | Project ID |
+| `job_id` | Job ID |
+| `permissions` | Array of granted permissions |
+| `exp` | Expiry (Unix timestamp, max 24h) |
+
+#### Authorizing requests
+
+Use `project_id` from the token claims to scope access. Agents should only access resources within their own project:
+
+```typescript
+async function requireProjectAccess(req, res, next) {
+  if (!req.agent) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.agent.project_id !== req.params.projectId) {
+    return res.status(403).json({ error: 'Cross-project access denied' });
+  }
+  next();
+}
+```
 
 ### Service-to-Eve API access
 
@@ -172,21 +266,6 @@ eve secrets set EVE_API_TOKEN <token> --project proj_xxx
 ```
 
 The token is injected into the service environment via manifest configuration. Eve automatically provides `EVE_API_URL` (internal cluster URL for server-to-server calls), `EVE_PUBLIC_API_URL` (public URL for browser-facing code), `EVE_PROJECT_ID`, `EVE_ORG_ID`, and `EVE_ENV_NAME` in every service container.
-
-### Token verification
-
-When an agent calls your app's API, the request includes an `Authorization: Bearer` header with a job token. Verify it using remote verification (simplest), local JWKS verification (faster), or any standard JWT library against the JWKS endpoint at `$EVE_API_URL/.well-known/jwks.json`.
-
-Token claims include:
-
-| Claim | Description |
-|-------|-------------|
-| `type` | `"job"` for agent tokens |
-| `org_id` | Organization ID |
-| `project_id` | Project ID |
-| `job_id` | Job ID |
-| `permissions` | Array of granted permissions |
-| `exp` | Expiry (Unix timestamp, max 24h) |
 
 ## Platform primitives
 

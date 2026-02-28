@@ -130,21 +130,36 @@ Default to `none`. Make agents `routable` only when they should receive direct m
 
 ## Agent runtime and warm pods
 
-Chat requests can be served from pre-provisioned, org-scoped runtime containers (warm pods) to reduce first-response latency for conversational flows.
+When a chat message arrives for an agent, Eve needs somewhere to execute it. The **agent runtime** provides pre-provisioned, org-scoped containers — warm pods — that are ready to handle requests immediately, eliminating cold-start latency for conversational flows.
 
-- Warm runtimes are intended for low-latency chat and small helper jobs.
-- Heavy or untrusted tasks should prefer full runner execution.
-- Set `EVE_AGENT_RUNTIME_EXECUTION_MODE` to:
-  - `inline` to reuse the warm runtime path
-  - `runner` to run each request in an ephemeral runner pod
+### How warm pods work
 
-Inspect current runtime status with:
+Warm pods are long-lived containers that report health and capacity to the platform via a heartbeat. When a chat request arrives, the platform places it on a warm pod within the same organization using a sticky routing strategy. This means your agents respond in seconds rather than waiting for a fresh container to spin up.
+
+Each warm pod tracks:
+- **Health status** — whether the pod is ready to accept work
+- **Capacity** — how many concurrent requests the pod can handle
+- **Org binding** — which organization the pod serves
+
+### Execution modes
+
+The `EVE_AGENT_RUNTIME_EXECUTION_MODE` environment variable controls how agent jobs run:
+
+| Mode | Behavior | Best for |
+|------|----------|----------|
+| `inline` (default) | Execute directly in the warm pod | Chat, triage, lightweight tasks |
+| `runner` | Spin up an ephemeral runner pod | Heavy computation, untrusted code, long-running tasks |
+
+Inline mode is the default because it gives the fastest response times. Switch to runner mode when you need stronger isolation — for example, when agents execute user-provided code or perform resource-intensive operations that could affect other requests sharing the pod.
 
 ```bash
+# Check runtime status for your agents
 eve agents runtime-status
 ```
 
-If warm pods are disabled, first response times are higher but isolation is stronger.
+:::tip
+Start with inline mode. If you observe resource contention or need stricter isolation for specific agents, switch those agents to runner mode selectively via environment overrides rather than changing the global setting.
+:::
 
 ## Teams and dispatch modes
 
@@ -322,6 +337,44 @@ x-eve:
 ```
 
 When `drop_unavailable` is true, unavailable harnesses are silently skipped and the next entry in the fallback chain is tried.
+
+## Managed inference
+
+Eve can route inference requests to platform-managed models so that individual projects don't need to configure their own model endpoints. A project calls `managed/<canonical>` as the model name, and the platform resolves, routes, and load-balances the request automatically.
+
+### How managed inference works
+
+When your agent (or any service) sends an inference request with a managed model name, the platform:
+
+1. Parses the model name as `managed/<canonical>` (e.g., `managed/deepseek-r1`)
+2. Looks up the canonical name in the platform's managed model registry
+3. Verifies the model is enabled and the target is healthy
+4. Routes the request to the correct inference target
+
+```bash
+# Any project can call a managed model directly
+curl -X POST /inference/v1/chat/completions \
+  -d '{"model": "managed/deepseek-r1", "messages": [...]}'
+```
+
+No project-level alias configuration, install steps, or routing policies are needed. The platform handles all of that.
+
+### Inference controls
+
+The platform provides several controls for managing inference traffic:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `EVE_INFERENCE_ADMISSION_ENABLED` | `true` | Queue admission control |
+| `EVE_INFERENCE_ADMISSION_TIMEOUT_MS` | `2000` | Timeout for admission queue |
+| `EVE_INFERENCE_ORG_TOKENS_PER_HOUR` | — | Org-level token budget cap |
+| `EVE_INFERENCE_PROJECT_TOKENS_PER_HOUR` | — | Project-level token budget cap |
+
+Token budget caps prevent runaway costs. When a budget is exhausted, inference requests are rejected with a clear error until the next hour window.
+
+:::tip
+Managed inference is the simplest way to give your agents access to self-hosted models like DeepSeek or Llama. Platform admins publish models once, and every project in the organization can use them immediately.
+:::
 
 ## Planning councils
 

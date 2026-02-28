@@ -96,19 +96,25 @@ Eve supports multiple worker types, each providing a container image with differ
 
 ### Image variants
 
-| Image | Description |
-|-------|-------------|
-| **base** | Runtime without toolchains -- Node.js, worker harness, and base utilities only |
-| **python** | Python 3.11, pip, uv package manager |
-| **rust** | Rust 1.75 via rustup, cargo |
-| **node** | JavaScript/TypeScript tooling with modern Node runtime |
+All images are published to public ECR and versioned using git tags (format: `worker-images/vX.Y.Z`).
+
+| Image | ECR Path | Description |
+|-------|----------|-------------|
+| **base** | `public.ecr.aws/.../worker-base:<version>` | Runtime without toolchains -- Node.js, worker harness, and base utilities only |
+| **python** | `public.ecr.aws/.../worker-python:<version>-py3.11` | Python 3.11, pip, uv package manager |
+| **rust** | `public.ecr.aws/.../worker-rust:<version>-rust1.75` | Rust 1.75 via rustup, cargo |
+| **java** | `public.ecr.aws/.../worker-java:<version>-jdk21` | OpenJDK 21 |
+| **kotlin** | `public.ecr.aws/.../worker-kotlin:<version>-kotlin2.0-jdk21` | Kotlin 2.0 + OpenJDK 21 |
+| **full** | `public.ecr.aws/.../worker-full:<version>` | All toolchains combined |
+
+The `full` variant is used by default for local development. Override via `EVE_WORKER_VARIANT` (e.g., `EVE_WORKER_VARIANT=base` for a slimmer image). Each variant is built independently to optimize build caching and image size.
 
 ### Worker routing
 
 The orchestrator uses `EVE_WORKER_URLS` to map worker type names to service URLs:
 
 ```
-EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-python:4811,rust-worker=http://worker-rust:4811,node-worker=http://worker-node:4811
+EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-python:4811,rust-worker=http://worker-rust:4811
 ```
 
 | Worker type | Routes to | Image |
@@ -116,7 +122,8 @@ EVE_WORKER_URLS=default-worker=http://worker:4811,python-worker=http://worker-py
 | `default-worker` | `worker` service | base (or per `EVE_WORKER_VARIANT`) |
 | `python-worker` | `worker-python` service | python variant |
 | `rust-worker` | `worker-rust` service | rust variant |
-| `node-worker` | `worker-node` service | node variant |
+| `java-worker` | `worker-java` service | java variant |
+| `kotlin-worker` | `worker-kotlin` service | kotlin variant |
 
 If a job specifies a worker type not present in `EVE_WORKER_URLS`, it fails early with a clear error.
 
@@ -130,6 +137,59 @@ eve job create \
 ```
 
 When no `worker_type` is specified, the orchestrator uses `default-worker`.
+
+### Adding a new worker type
+
+To add a custom worker type (for example, a Playwright worker for browser testing):
+
+**1. Add a worker service.**
+
+For Kubernetes, duplicate the worker deployment and service in `k8s/base/worker.yaml`. Give it a new name (e.g., `worker-playwright`) and a unique service port. For Docker Compose, duplicate the `worker` service in `docker-compose.yml`.
+
+**2. Update the routing map.**
+
+Add the new worker to `EVE_WORKER_URLS` in the orchestrator service configuration:
+
+```
+EVE_WORKER_URLS=...,playwright-worker=http://worker-playwright:4811
+```
+
+**3. Create jobs targeting the worker.**
+
+```bash
+eve job create \
+  --project proj_xxx \
+  --description "Run UI checks" \
+  --worker-type playwright-worker
+```
+
+:::tip
+All worker services must mount the same workspace and skill pack volumes. Docker Compose and Kubernetes worker services use port 4811 by default.
+:::
+
+### Building worker images locally
+
+Worker images can be built locally for development and testing. The build system supports individual variants or all variants at once:
+
+```bash
+# Build a specific variant
+eh worker-image build --variant python
+
+# Build the full variant (all toolchains)
+eh worker-image build --variant full
+```
+
+For smaller images, disable specific AI harnesses:
+
+```bash
+# Build with only Claude Code (saves ~800MB)
+eh worker-image build --variant full -- \
+  --build-arg INSTALL_CODEX=false \
+  --build-arg INSTALL_GEMINI=false \
+  --build-arg INSTALL_CODE=false
+```
+
+After building, import images into a local k3d cluster with `eh k8s-image push --worker-only`.
 
 ## Workspace structure
 
@@ -153,16 +213,32 @@ $WORKSPACE_ROOT/                     # e.g., /opt/eve/workspaces
 
 ### Environment contract
 
-All worker images enforce a deterministic environment contract:
+All worker images enforce a deterministic environment contract to ensure consistent behavior across local development, Kubernetes, and Docker Compose deployments.
+
+**User and directory structure:**
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
+| `EVE_RUN_AS_UID` | `1000` | User ID for running processes |
+| `EVE_RUN_AS_GID` | `1000` | Group ID for running processes |
+| `EVE_HOME` | `/home/node` | Home directory for the node user |
 | `EVE_WORKSPACE_ROOT` | `/opt/eve/workspaces` | Root for all workspace mounts |
 | `EVE_CACHE_ROOT` | `/opt/eve/cache` | Shared cache for package managers |
-| `EVE_HOME` | `/home/node` | Home directory for the node user |
-| `EVE_RUN_AS_UID` | `1000` | User ID for running processes |
+| `EVE_STATE_ROOT` | `/opt/eve/state` | Root for persistent state |
+| `EVE_TOOLCHAIN_ROOT` | `/opt/eve/toolchains` | Root for installed toolchains |
 
-Processes run as UID 1000 (non-root). Workspace directories are writable by the worker process. Cache directories are shared across attempts for efficiency.
+**Cache routing:** Tool-specific caches are redirected to the shared cache root so they survive across attempts:
+
+| Variable | Value |
+|----------|-------|
+| `XDG_CACHE_HOME` | `/opt/eve/cache` |
+| `NPM_CONFIG_CACHE` | `/opt/eve/cache/npm` |
+| `PNPM_HOME` | `/opt/eve/cache/pnpm` |
+| `PIP_CACHE_DIR` | `/opt/eve/cache/pip` |
+| `UV_CACHE_DIR` | `/opt/eve/cache/uv` |
+| `CCACHE_DIR` | `/opt/eve/cache/ccache` |
+
+Processes run as UID 1000 (non-root). The entrypoint verifies all required paths are writable and fails fast if any permission check fails. On Kubernetes, runner pods use `runAsUser: 1000` / `fsGroup: 1000` to enforce correct ownership on volume mounts.
 
 ## Permission policies
 

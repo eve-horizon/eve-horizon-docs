@@ -334,11 +334,29 @@ Resolved git state is stored on each attempt for debugging:
 
 This metadata is also promoted to `JobResponse.resolved_git` from the latest successful attempt.
 
-### Repo Auth
+### Repo URL Formats
 
-- **HTTPS**: uses `github_token` secrets (e.g., `GITHUB_TOKEN`)
-- **SSH**: uses `ssh_key` secrets via `GIT_SSH_COMMAND`
-- Missing auth fails fast with remediation hints (`eve secrets set`)
+Jobs accept these repository URL formats:
+
+| Format | Example | Auth mechanism |
+|--------|---------|----------------|
+| HTTPS | `https://github.com/org/repo` | `github_token` secrets (e.g., `GITHUB_TOKEN`) |
+| SSH | `git@github.com:org/repo.git` | `ssh_key` secrets via `GIT_SSH_COMMAND` |
+| File | `file:///absolute/path` | None (local/dev only) |
+
+Missing auth fails fast with a remediation hint pointing to `eve secrets set`. HTTPS is recommended for production; SSH is useful when deploy keys are already configured; file URLs are for local development only.
+
+### Commit Policy Details
+
+The `commit` and `push` fields interact as follows:
+
+- `commit=manual` means the agent decides if and when to commit. Manual commits are not tracked for push, so `push=on_success` only pushes commits the worker itself creates.
+- `commit=auto` runs `git add -A` and commits any uncommitted changes (staged or unstaged) after execution, even on failed attempts. This ensures no work is lost.
+- `commit=required` does not auto-commit. On success, it fails the attempt if the working tree is clean -- verifying that the agent actually produced changes.
+- `push=on_success` pushes only when the worker created commits in this attempt.
+- `push=required` always attempts to push but no-ops if no worker-created commits exist. If the push itself fails, the attempt is marked as failed.
+
+If commit or push fails under a `required` policy, the worker marks the entire attempt as failed.
 
 ## Parent-Child Relationships
 
