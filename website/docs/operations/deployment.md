@@ -134,6 +134,7 @@ Manifest environment values support variable interpolation at deploy time:
 | `${ORG_ID}` | Organization ID | `org_01xyz...` |
 | `${ORG_SLUG}` | Organization slug | `acme` |
 | `${COMPONENT_NAME}` | Current service name | `api` |
+| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eh1.incept5.dev` |
 | `${secret.KEY}` | Secret value | `${secret.DB_PASSWORD}` |
 | `${managed.<svc>.<field>}` | Managed DB value | `${managed.db.url}` |
 
@@ -145,11 +146,12 @@ Eve automatically injects these environment variables into every deployed servic
 |----------|---------|
 | `EVE_API_URL` | Internal cluster URL for server-to-server calls |
 | `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing apps |
+| `EVE_SSO_URL` | SSO broker URL for app login/session bootstrap |
 | `EVE_PROJECT_ID` | Current project ID |
 | `EVE_ORG_ID` | Current organization ID |
 | `EVE_ENV_NAME` | Current environment name |
 
-Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for browser or client-side code.
+Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for browser or client-side code. Use `EVE_SSO_URL` with `@eve/auth` and `@eve/auth-react` when adding app login.
 
 ## Zero-downtime deployments
 

@@ -82,6 +82,7 @@ Environment values support built-in variables that resolve at deploy time:
 | `${PROJECT_ID}` | Project ID | `proj_01kfew...` |
 | `${ORG_ID}` | Organization ID | `org_Example...` |
 | `${ORG_SLUG}` | Organization slug | `acme` |
+| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eh1.incept5.dev` |
 | `${secret.KEY}` | Secret value | `${secret.DB_PASSWORD}` |
 | `${managed.<svc>.<field>}` | Managed DB field | `${managed.db.url}` |
 
@@ -440,11 +441,12 @@ Eve automatically injects environment variables into all deployed services so th
 |----------|-------------|
 | `EVE_API_URL` | Internal cluster URL for server-to-server calls |
 | `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing apps |
+| `EVE_SSO_URL` | SSO broker URL for app login/session bootstrap |
 | `EVE_PROJECT_ID` | The project ID |
 | `EVE_ORG_ID` | The organization ID |
 | `EVE_ENV_NAME` | The current environment name |
 
-Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for client-side code running in the browser. Services can override these values by defining them explicitly in their `environment` section.
+Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for client-side code running in the browser. Use `EVE_SSO_URL` when wiring app login flows with `@eve/auth` and `@eve/auth-react`. Services can override these values by defining them explicitly in their `environment` section.
 
 ## What's next?
 

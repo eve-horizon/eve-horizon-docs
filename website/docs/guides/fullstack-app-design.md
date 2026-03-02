@@ -147,11 +147,12 @@ Every deployed service automatically receives a set of environment variables fro
 |----------|-------------|---------|
 | `EVE_API_URL` | Internal cluster URL for server-to-server calls | `http://eve-api:4701` |
 | `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing code | `https://api.eh1.incept5.dev` |
+| `EVE_SSO_URL` | SSO broker URL for app login/session bootstrap | `https://sso.eh1.incept5.dev` |
 | `EVE_PROJECT_ID` | The project ID | `proj_01abc123...` |
 | `EVE_ORG_ID` | The organization ID | `org_01xyz789...` |
 | `EVE_ENV_NAME` | The environment name | `staging`, `production` |
 
-Use `EVE_API_URL` for backend/server-side calls from your container to the Eve API (internal cluster networking). Use `EVE_PUBLIC_API_URL` for browser/client-side calls or any code running outside the cluster.
+Use `EVE_API_URL` for backend/server-side calls from your container to the Eve API (internal cluster networking). Use `EVE_PUBLIC_API_URL` for browser/client-side calls or any code running outside the cluster. Use `EVE_SSO_URL` when integrating browser login with the shared auth SDKs.
 
 ```javascript
 // Server-side: call Eve API from your backend

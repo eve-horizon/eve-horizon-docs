@@ -54,6 +54,10 @@ Eve uses RS256 JWT tokens as the primary authentication mechanism. When Supabase
   "sub": "user_abc123",
   "email": "user@example.com",
   "type": "user",
+  "orgs": [
+    { "id": "org_ManualTestOrg", "role": "owner" },
+    { "id": "org_Incept5", "role": "admin" }
+  ],
   "iat": 1706000000,
   "exp": 1706086400
 }
@@ -81,6 +85,15 @@ curl "$EVE_API_URL/.well-known/jwks.json"
 ```
 
 During key rotation, both old and new keys appear in the JWKS response.
+
+## App auth SDKs
+
+For app-facing authentication, Eve provides two shared packages:
+
+- `@eve/auth` for backend middleware (`eveUserAuth`, `eveAuthGuard`, `eveAuthConfig`)
+- `@eve/auth-react` for frontend session bootstrap and login UI
+
+When apps are deployed on Eve, `EVE_SSO_URL` is injected automatically alongside `EVE_API_URL` and `EVE_ORG_ID`, so apps can discover SSO endpoints without hostname guessing.
 
 ## SSH challenge-response
 

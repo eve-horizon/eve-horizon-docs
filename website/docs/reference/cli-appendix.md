@@ -268,13 +268,13 @@ eve admin <subcommand> [options]
 
 ### eve admin users {#eve-admin-users}
 
-List platform users and org memberships (system admin).
+List platform users with org and project memberships (system admin).
 
 ```bash
 eve admin users [--json]
 ```
 
-Output includes user email, display name, admin status, org memberships/roles, and creation date.
+Output includes user email, display name, admin status, org memberships, project memberships, and creation date.
 
 **Examples:**
 
@@ -926,6 +926,32 @@ Show the permission matrix (which permissions each role has).
 ```bash
 eve auth permissions
 eve auth permissions --json
+```
+
+---
+
+## eve user {#eve-user}
+
+Look up user profiles and memberships.
+
+```bash
+eve user <show> [user_id|me] [--json]
+```
+
+### eve user show {#eve-user-show}
+
+Show a user profile with org and project memberships. Defaults to `me` when no `user_id` is provided.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | boolean | `false` | Output machine-readable JSON |
+
+**Examples:**
+
+```bash
+eve user show me
+eve user show usr_abc123
+eve user show me --json
 ```
 
 ---

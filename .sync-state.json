@@ -1,8 +1,27 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "c7a3c6674fbd3fb0bce626199e57d340fbe78809",
-  "last_synced_at": "2026-02-27T16:28:16.808Z",
+  "last_synced_commit": "3f1227ea7a11821318564408dc689b80f451767e",
+  "last_synced_at": "2026-03-02T09:03:16.168Z",
   "sync_log": [
+    {
+      "commit": "3f1227ea7a11821318564408dc689b80f451767e",
+      "commit_short": "3f1227e",
+      "synced_at": "2026-03-02T09:03:16.168Z",
+      "type": "incremental",
+      "commits_synced": 12,
+      "docs_updated": [
+        "guides/environments.md",
+        "guides/fullstack-app-design.md",
+        "operations/deployment.md",
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md",
+        "operations/security.md"
+      ],
+      "unmapped_sources": [
+        "docs/system/README.md (modified, 2 lines)"
+      ],
+      "summary": "Synced SSO/app-auth docs updates, added eve user CLI references, and documented SSO interpolation/injected variables."
+    },
     {
       "commit": "c7a3c6674fbd3fb0bce626199e57d340fbe78809",
       "commit_short": "c7a3c66",
