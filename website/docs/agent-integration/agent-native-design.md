@@ -199,7 +199,7 @@ When an agent calls your app's API, the request includes an `Authorization: Bear
 **Remote verification (simplest)** -- Call the Eve API to validate the token with no key management:
 
 ```typescript
-import { verifyEveTokenRemote, eveAuthMiddleware } from '@eve/auth';
+import { verifyEveTokenRemote, eveAuthMiddleware } from '@eve-horizon/auth';
 
 // One-liner middleware for Express:
 app.use('/api', eveAuthMiddleware({ strategy: 'remote' }));
@@ -214,7 +214,7 @@ The middleware calls `GET $EVE_API_URL/auth/token/verify` with the token and att
 **Local JWKS verification (faster)** -- Fetch Eve's public keys once and verify tokens locally:
 
 ```typescript
-import { verifyEveToken, eveAuthMiddleware } from '@eve/auth';
+import { verifyEveToken, eveAuthMiddleware } from '@eve-horizon/auth';
 
 // Express middleware with local verification:
 app.use('/api', eveAuthMiddleware({ strategy: 'local' }));

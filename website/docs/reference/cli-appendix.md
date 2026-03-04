@@ -2458,6 +2458,10 @@ eve local up --skip-deploy
 eve local up --timeout 600
 ```
 
+:::note
+`eve local up` now handles public registry pulls more defensively: it attempts Docker auth for ECR Public automatically (via AWS CLI when available), retries rate-limited registry requests, and surfaces explicit auth guidance when image pulls fail with `401`/`403`.
+:::
+
 ### eve local down {#eve-local-down}
 
 Stop local stack resources, or destroy cluster entirely.

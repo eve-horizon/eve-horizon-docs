@@ -1,8 +1,29 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "3f1227ea7a11821318564408dc689b80f451767e",
-  "last_synced_at": "2026-03-02T09:03:16.168Z",
+  "last_synced_commit": "bcd3fb14bb3d70882f9ce93b1b7a20c0e8612290",
+  "last_synced_at": "2026-03-04T09:02:04.176Z",
   "sync_log": [
+    {
+      "commit": "bcd3fb14bb3d70882f9ce93b1b7a20c0e8612290",
+      "commit_short": "bcd3fb1",
+      "synced_at": "2026-03-04T09:02:04.176Z",
+      "type": "incremental",
+      "commits_synced": 17,
+      "docs_updated": [
+        "guides/authentication.md",
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md",
+        "agent-integration/agent-native-design.md",
+        "operations/security.md"
+      ],
+      "unmapped_sources": [
+        "docs/system/README.md (modified, 3 lines)",
+        "docs/system/eve-sdk.md (added, 181 lines)",
+        "docs/system/openapi.json (modified, 10753 lines)",
+        "docs/system/openapi.yaml (modified, 3410 lines)"
+      ],
+      "summary": "Synced auth SDK package rename to @eve-horizon/* and documented eve local registry auth/retry behavior."
+    },
     {
       "commit": "3f1227ea7a11821318564408dc689b80f451767e",
       "commit_short": "3f1227e",

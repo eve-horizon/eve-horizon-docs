@@ -377,21 +377,21 @@ Eve provides two SDK packages that handle token verification, session management
 
 | Package | Runtime | What it does |
 |---------|---------|-------------|
-| `@eve/auth` | Node.js (Express / NestJS) | Verify JWTs, check org membership, serve auth config |
-| `@eve/auth-react` | React | Session bootstrap, login gate, auth hooks |
+| `@eve-horizon/auth` | Node.js (Express / NestJS) | Verify JWTs, check org membership, serve auth config |
+| `@eve-horizon/auth-react` | React | Session bootstrap, login gate, auth hooks |
 
 ### Backend setup
 
 Install the backend package:
 
 ```bash
-npm install @eve/auth
+npm install @eve-horizon/auth
 ```
 
 Then wire up three pieces of middleware:
 
 ```typescript
-import { eveUserAuth, eveAuthGuard, eveAuthConfig } from '@eve/auth';
+import { eveUserAuth, eveAuthGuard, eveAuthConfig } from '@eve-horizon/auth';
 
 // 1. Parse and verify tokens on every request (non-blocking)
 app.use(eveUserAuth());
@@ -430,13 +430,13 @@ export class EveGuard implements CanActivate {
 Install the React package:
 
 ```bash
-npm install @eve/auth-react
+npm install @eve-horizon/auth-react
 ```
 
 Wrap your app in the auth provider and login gate:
 
 ```tsx
-import { EveAuthProvider, EveLoginGate } from '@eve/auth-react';
+import { EveAuthProvider, EveLoginGate } from '@eve-horizon/auth-react';
 
 function App() {
   return (
@@ -472,7 +472,7 @@ function App() {
 The `useEveAuth` hook gives you the current user and login/logout actions:
 
 ```tsx
-import { useEveAuth, createEveClient } from '@eve/auth-react';
+import { useEveAuth, createEveClient } from '@eve-horizon/auth-react';
 
 function Dashboard() {
   const { user, logout } = useEveAuth();
@@ -513,7 +513,7 @@ The `local` strategy means membership changes (like removing a user from an org)
 If your app receives requests from Eve agent jobs rather than human users, use `eveAuthMiddleware` instead:
 
 ```typescript
-import { eveAuthMiddleware } from '@eve/auth';
+import { eveAuthMiddleware } from '@eve-horizon/auth';
 
 // Blocking: returns 401 immediately on any auth failure
 app.use('/agent-api', eveAuthMiddleware());
@@ -539,7 +539,7 @@ When you deploy an app to Eve, the platform automatically injects these environm
 | `EVE_PROJECT_ID` | Project ID |
 | `EVE_ENV_NAME` | Environment name |
 
-The `@eve/auth` middleware reads `EVE_API_URL`, `EVE_ORG_ID`, and `EVE_SSO_URL` automatically. You don't need to pass them as options unless you want to override the defaults (for example, in local development).
+The `@eve-horizon/auth` middleware reads `EVE_API_URL`, `EVE_ORG_ID`, and `EVE_SSO_URL` automatically. You don't need to pass them as options unless you want to override the defaults (for example, in local development).
 
 You can also reference these in your manifest using interpolation syntax:
 

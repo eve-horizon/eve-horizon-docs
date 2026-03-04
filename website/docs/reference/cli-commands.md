@@ -46,7 +46,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 
 | Command | Description |
 |---------|-------------|
-| [eve local](/docs/reference/cli-appendix#eve-local) | Manage a local k3d Kubernetes cluster running the Eve platform |
+| [eve local](/docs/reference/cli-appendix#eve-local) | Manage a local k3d Kubernetes cluster running the Eve platform (includes automatic ECR Public auth and pull retries during `eve local up`) |
 | [eve db](/docs/reference/cli-appendix#eve-db) | Inspect and query environment databases -- schema, RLS, SQL, migrations |
 | [eve api](/docs/reference/cli-appendix#eve-api) | Explore project API sources, view specs, call endpoints with Eve auth |
 
