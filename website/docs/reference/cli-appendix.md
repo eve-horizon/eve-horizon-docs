@@ -1863,6 +1863,66 @@ eve init . --branch develop
 
 ---
 
+## eve ingest {#eve-ingest}
+
+Upload files for ingest processing and inspect ingest lifecycle records.
+
+```
+eve ingest <file>
+eve ingest <create|list|show> [args] [options]
+```
+
+### eve ingest create {#eve-ingest-create}
+
+Create an ingest record, upload the file to the returned presigned URL, and confirm processing.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `[file]` | string | — | Path to local file to ingest |
+| `--project <id>` | string | Profile default | Project ID |
+| `--title <text>` | string | — | Optional user-facing title |
+| `--description <text>` | string | — | Optional description/context |
+| `--instructions <text>` | string | — | Optional processing guidance |
+| `--tags <a,b>` | string | — | Comma-separated tags |
+| `--mime-type <type>` | string | Inferred from file extension | Override MIME type |
+| `--source-channel <name>` | string | `cli` | Source marker for downstream processing |
+| `--json` | boolean | `false` | Output response as JSON |
+
+`eve ingest <file>` is shorthand for `eve ingest create <file>`.
+
+### eve ingest list {#eve-ingest-list}
+
+List ingest records for a project.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project <id>` | string | Profile default | Project ID |
+| `--status <status>` | string | — | Filter by ingest status |
+| `--limit <n>` | number | API default | Max items |
+| `--offset <n>` | number | API default | Skip first n items |
+| `--json` | boolean | `false` | Output response as JSON |
+
+### eve ingest show {#eve-ingest-show}
+
+Show details for a single ingest record.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `[ingest_id]` | string | — | Ingest record ID |
+| `--project <id>` | string | Profile default | Project ID |
+| `--json` | boolean | `false` | Output response as JSON |
+
+**Examples:**
+
+```bash
+eve ingest ./docs/spec.md
+eve ingest create ./audio/meeting.mp3 --title "Weekly sync" --tags notes,meeting
+eve ingest list --status processing
+eve ingest show ing_abc123 --json
+```
+
+---
+
 ## eve identity {#eve-identity}
 
 Identity linking helpers for external providers.
@@ -3479,7 +3539,7 @@ eve secrets export --project proj_xxx --keys GITHUB_WEBHOOK_SECRET
 
 ## eve skills {#eve-skills}
 
-Install skills from a URL, GitHub repo, or `skills.txt` manifest.
+Install skills from pack definitions in `.eve/manifest.yaml` or from explicit sources.
 
 ```
 eve skills <subcommand> [source]
@@ -3487,7 +3547,10 @@ eve skills <subcommand> [source]
 
 ### eve skills install {#eve-skills-install}
 
-Install skill packs from a source or `skills.txt` manifest.
+Install skills with this resolution order:
+1. If `.eve/manifest.yaml` includes `x-eve.packs`, install from those packs (validated against `.eve/packs.lock.yaml`).
+2. Otherwise, use an explicit source argument when provided.
+3. Otherwise, fall back to `skills.txt`.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -3500,7 +3563,7 @@ Install skill packs from a source or `skills.txt` manifest.
 eve skills install https://github.com/org/skillpack
 eve skills install org/skillpack
 eve skills install ./local/skills
-eve skills install                    # install from skills.txt
+eve skills install                    # install from x-eve.packs, or skills.txt fallback
 eve skills install --skip-installed
 ```
 
