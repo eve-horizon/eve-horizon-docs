@@ -1,8 +1,22 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "f1670293ca09468fbdecb0db01310ce6b826bf62",
-  "last_synced_at": "2026-03-06T09:03:30.479Z",
+  "last_synced_commit": "cea48e66692f2b5524a2d126377d6f39a6cbfe85",
+  "last_synced_at": "2026-03-06T11:33:30.698Z",
   "sync_log": [
+    {
+      "commit": "cea48e66692f2b5524a2d126377d6f39a6cbfe85",
+      "commit_short": "cea48e6",
+      "synced_at": "2026-03-06T11:33:30.698Z",
+      "type": "incremental",
+      "commits_synced": 8,
+      "docs_updated": [
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md"
+      ],
+      "unmapped_sources": [],
+      "summary": "Documented new eve db snapshot/restore/backup-status commands plus skip-snapshot options for reset and destroy.",
+      "changelog_noted": true
+    },
     {
       "commit": "f1670293ca09468fbdecb0db01310ce6b826bf62",
       "commit_short": "f167029",

@@ -1201,7 +1201,7 @@ eve db migrations --env <name>|--url <postgres-url> [--project <id>]
 Reset schema and optionally re-apply migrations.
 
 ```
-eve db reset --env <name>|--url <postgres-url> --force [--no-migrate] [--project <id>]
+eve db reset --env <name>|--url <postgres-url> --force [--no-migrate] [--skip-snapshot] [--project <id>]
 ```
 
 ### eve db wipe {#eve-db-wipe}
@@ -1210,6 +1210,83 @@ Alias for reset with `--no-migrate`.
 
 ```
 eve db wipe --env <name>|--url <postgres-url> --force [--project <id>]
+```
+
+### eve db destroy {#eve-db-destroy}
+
+Destroy a managed environment database.
+
+```
+eve db destroy --env <name> --force [--skip-snapshot] [--project <id>]
+```
+
+### eve db snapshot {#eve-db-snapshot}
+
+Create, inspect, delete, or download database snapshots.
+
+**Snapshot create:**
+
+```
+eve db snapshot --env <name> [--retention <policy>] [--project <id>]
+```
+
+**Snapshot show:**
+
+```
+eve db snapshot show <snapshot_id> [--env <name>] [--project <id>]
+```
+
+**Snapshot delete:**
+
+```
+eve db snapshot delete <snapshot_id> [--env <name>] --force [--project <id>]
+```
+
+**Snapshot download URL:**
+
+```
+eve db snapshot download <snapshot_id> --output <path> [--env <name>] [--project <id>]
+```
+
+### eve db snapshots {#eve-db-snapshots}
+
+List snapshots for an environment.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--env <name>` | string | — | Environment name |
+| `--status <state>` | string | — | Filter snapshots by status |
+| `--limit <n>` | integer | API default | Maximum snapshots to return |
+| `--project <id>` | string | Profile default | Project ID |
+
+```
+eve db snapshots --env <name> [--status <state>] [--limit <n>] [--project <id>]
+```
+
+### eve db restore {#eve-db-restore}
+
+Restore an environment database from a snapshot.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--env <name>` | string | — | Target environment to restore |
+| `--snapshot <id>` | string | — | Snapshot ID to restore from |
+| `--force` | boolean | `false` | Required confirmation flag |
+| `--source-env <name>` | string | — | Optional source environment for cross-env restore |
+| `--source-project <id>` | string | — | Optional source project for cross-project restore |
+| `--skip-safety-snapshot` | boolean | `false` | Skip pre-restore safety snapshot |
+| `--project <id>` | string | Profile default | Project ID |
+
+```
+eve db restore --env <name> --snapshot <id> --force [--source-env <name>] [--source-project <id>] [--skip-safety-snapshot] [--project <id>]
+```
+
+### eve db backup-status {#eve-db-backup-status}
+
+Show backup schedule and snapshot protection settings for an environment.
+
+```
+eve db backup-status --env <name> [--project <id>]
 ```
 
 ---
