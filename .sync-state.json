@@ -1,8 +1,21 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "71c037e2051f8c146ad052dfb523e1aafbe4e9c8",
-  "last_synced_at": "2026-03-05T09:02:09.360Z",
+  "last_synced_commit": "f1670293ca09468fbdecb0db01310ce6b826bf62",
+  "last_synced_at": "2026-03-06T09:03:30.479Z",
   "sync_log": [
+    {
+      "commit": "f1670293ca09468fbdecb0db01310ce6b826bf62",
+      "commit_short": "f167029",
+      "synced_at": "2026-03-06T09:03:30.479Z",
+      "type": "incremental",
+      "commits_synced": 15,
+      "docs_updated": [
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md"
+      ],
+      "unmapped_sources": [],
+      "summary": "Updated CLI docs for pack workflow sync behavior and expanded eve ingest MIME type inference across document, image, audio, and video formats."
+    },
     {
       "commit": "71c037e2051f8c146ad052dfb523e1aafbe4e9c8",
       "commit_short": "71c037e",

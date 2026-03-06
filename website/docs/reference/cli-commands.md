@@ -80,7 +80,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 
 | Command | Description |
 |---------|-------------|
-| [eve agents](/docs/reference/cli-appendix#eve-agents) | Inspect agent policy config, sync agents/teams/chat config |
+| [eve agents](/docs/reference/cli-appendix#eve-agents) | Inspect agent policy config, sync agents/teams/chat config, and apply pack-defined workflows |
 | [eve packs](/docs/reference/cli-appendix#eve-packs) | Manage AgentPack lockfile and resolution |
 | [eve skills](/docs/reference/cli-appendix#eve-skills) | Install skills from manifest-defined packs (`x-eve.packs`) or fall back to `skills.txt`/explicit sources |
 | [eve chat](/docs/reference/cli-appendix#eve-chat) | Simulate chat messages for gateway testing |
@@ -103,7 +103,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve docs](/docs/reference/cli-appendix#eve-docs) | Manage versioned org documents -- write, read, search, review lifecycle |
-| [eve ingest](/docs/reference/cli-appendix#eve-ingest) | Upload files for ingest processing, list ingest records, and inspect ingest status |
+| [eve ingest](/docs/reference/cli-appendix#eve-ingest) | Upload files for ingest processing with broad file-type MIME inference, list ingest records, and inspect ingest status |
 | [eve memory](/docs/reference/cli-appendix#eve-memory) | Manage canonical agent memory namespaces backed by org docs |
 | [eve kv](/docs/reference/cli-appendix#eve-kv) | Agent key-value state with optional TTL |
 | [eve search](/docs/reference/cli-appendix#eve-search) | Unified org search across memory, docs, threads, attachments, events |

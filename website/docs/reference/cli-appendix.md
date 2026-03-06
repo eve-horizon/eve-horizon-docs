@@ -422,7 +422,7 @@ eve agents config --path ../my-repo
 
 ### eve agents sync {#eve-agents-sync}
 
-Sync `agents.yaml`/`teams.yaml`/`chat.yaml` to the API.
+Sync `agents.yaml`/`teams.yaml`/`chat.yaml` to the API, and sync pack-defined workflows through the manifest endpoint when present.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -440,6 +440,8 @@ eve agents sync --project proj_xxx --ref main
 eve agents sync --project proj_xxx --ref HEAD
 eve agents sync --project proj_xxx --local --allow-dirty
 ```
+
+When `x-eve.packs` are resolved, `eve agents sync` now also uploads merged workflow definitions (`workflows`) and merged `x_eve` fragments (for example `profiles`) to the project manifest.
 
 ### eve agents runtime-status {#eve-agents-runtime-status}
 
@@ -1890,6 +1892,15 @@ Create an ingest record, upload the file to the returned presigned URL, and conf
 
 `eve ingest <file>` is shorthand for `eve ingest create <file>`.
 
+MIME types are inferred from file extension when `--mime-type` is not provided. Supported inference now covers:
+
+- Text: `md`, `txt`, `csv`, `html`, `htm`
+- Structured data: `json`, `yaml`, `yml`, `xml`
+- Documents: `pdf`, `doc`, `docx`, `rtf`
+- Images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `tif`, `tiff`
+- Audio: `mp3`, `wav`, `m4a`, `aac`, `ogg`, `opus`, `flac`, `wma`, `amr`, `m4b`, `m4r`, `oga`
+- Video: `mp4`, `mkv`, `mov`, `avi`, `wmv`, `webm`, `flv`, `m4v`, `mpeg`, `mpg`, `3gp`, `ogv`
+
 ### eve ingest list {#eve-ingest-list}
 
 List ingest records for a project.
@@ -2986,6 +2997,8 @@ eve packs <subcommand> [options]
 ### eve packs status {#eve-packs-status}
 
 Show resolved packs from lockfile, effective config stats, and drift detection.
+
+Effective config stats include merged `agents`, `teams`, `chat routes`, and `x_eve.profiles` counts.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
