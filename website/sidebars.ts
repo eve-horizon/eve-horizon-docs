@@ -70,6 +70,7 @@ const sidebars: SidebarsConfig = {
         'operations/database',
         'operations/security',
         'operations/troubleshooting',
+        'operations/sync-docs-changelog',
       ],
     },
   ],

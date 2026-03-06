@@ -80,6 +80,8 @@ workflows:
                - Use Node.js fetch() to call GitHub Compare API
                - Cross-reference changes with .sync-map.json
                - Update affected docs pages (human-readable documentation)
+               - If changes are noteworthy, add an entry to
+                 `website/docs/operations/sync-docs-changelog.md`
                - Fetch full source files via Contents API when patches are truncated
                - Update .sync-state.json with the new commit hash
             5. If there are no changes, report that docs are up to date

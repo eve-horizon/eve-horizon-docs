@@ -135,7 +135,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          to: '/changelog',
+          to: '/docs/operations/sync-docs-changelog',
           label: 'Changelog',
           position: 'left',
         },
@@ -166,7 +166,7 @@ const config: Config = {
         {
           title: 'More',
           items: [
-            { label: 'Changelog', to: '/changelog' },
+            { label: 'Changelog', to: '/docs/operations/sync-docs-changelog' },
             { label: 'GitHub', href: 'https://github.com/incept5/eve-horizon' },
           ],
         },

@@ -208,6 +208,24 @@ If both the work list and gap list are empty (changed files were in watch_paths 
 don't map to any page and no gaps detected): report "changes detected but no page
 mappings affected" and **stop**.
 
+### Materiality check (for changelog)
+
+Before dispatching workers, classify whether this run is significant enough to
+record in the public changelog page:
+
+- `reportable` = true when either:
+  - `commits_synced >= 4`, OR
+  - more than one mapped page is updated, OR
+  - any mapped page is outside:
+    - `reference/cli-commands.md`
+    - `reference/cli-appendix.md`
+- `reportable` = false when only one page changed and it is a CLI reference page
+  and the run appears to be a minor docs cleanup.
+
+Minor docs cleanup is when the update appears to be wording, formatting, or
+housekeeping changes only (for example: spelling, examples, whitespace, minor
+clarifications). Use judgment here — these should stay out of the public changelog.
+
 ---
 
 ### Phase 4: Dispatch Workers
@@ -281,7 +299,7 @@ After all pages are updated:
 3. Update `.sync-state.json`:
    - Set `last_synced_commit` to the new HEAD SHA
    - Set `last_synced_at` to current UTC timestamp
-   - Prepend a new entry to `sync_log`:
+     - Prepend a new entry to `sync_log`:
      ```json
      {
        "commit": "<full SHA>",
@@ -293,7 +311,8 @@ After all pages are updated:
        "unmapped_sources": [
          "<source path> (<change type>, <line count> lines)"
        ],
-       "summary": "<one-line summary of what changed>"
+       "summary": "<one-line summary of what changed>",
+       "changelog_noted": <true|false>
      }
      ```
    - `unmapped_sources` contains the gap list from Phase 3 (changed files that
@@ -303,7 +322,24 @@ After all pages are updated:
 
 4. Write the updated `.sync-state.json`
 
-5. Report a summary:
+5. Update changelog page:
+   - If `reportable` is false, report: "Change set is minor; skipping public changelog entry."
+   - If `reportable` is true:
+     - Read `website/docs/operations/sync-docs-changelog.md`
+     - Add a new row under the `## Entries` table with:
+       - UTC date from `synced_at`
+       - full commit link (`https://github.com/incept5/eve-horizon/commit/<full SHA>`)
+       - `commits_synced`
+       - comma-separated `docs_updated`
+       - one-line `summary` text
+     - Keep the table in reverse chronological order and preserve the page structure.
+     - Limit to 60 rows for readability (delete oldest rows if needed).
+     - Set `changelog_noted` in the log entry to `true`.
+   - If changelog updates fail (file missing or malformed), log the failure and
+     continue; do not fail the sync unless docs page updates also failed.
+   - If `reportable` is false, set `changelog_noted` in the log entry to `false`.
+
+6. Report a summary:
    - Number of commits synced
    - Pages updated (list them)
    - One-line summary of the platform changes
