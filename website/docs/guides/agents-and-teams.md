@@ -338,44 +338,6 @@ x-eve:
 
 When `drop_unavailable` is true, unavailable harnesses are silently skipped and the next entry in the fallback chain is tried.
 
-## Managed inference
-
-Eve can route inference requests to platform-managed models so that individual projects don't need to configure their own model endpoints. A project calls `managed/<canonical>` as the model name, and the platform resolves, routes, and load-balances the request automatically.
-
-### How managed inference works
-
-When your agent (or any service) sends an inference request with a managed model name, the platform:
-
-1. Parses the model name as `managed/<canonical>` (e.g., `managed/deepseek-r1`)
-2. Looks up the canonical name in the platform's managed model registry
-3. Verifies the model is enabled and the target is healthy
-4. Routes the request to the correct inference target
-
-```bash
-# Any project can call a managed model directly
-curl -X POST /inference/v1/chat/completions \
-  -d '{"model": "managed/deepseek-r1", "messages": [...]}'
-```
-
-No project-level alias configuration, install steps, or routing policies are needed. The platform handles all of that.
-
-### Inference controls
-
-The platform provides several controls for managing inference traffic:
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `EVE_INFERENCE_ADMISSION_ENABLED` | `true` | Queue admission control |
-| `EVE_INFERENCE_ADMISSION_TIMEOUT_MS` | `2000` | Timeout for admission queue |
-| `EVE_INFERENCE_ORG_TOKENS_PER_HOUR` | — | Org-level token budget cap |
-| `EVE_INFERENCE_PROJECT_TOKENS_PER_HOUR` | — | Project-level token budget cap |
-
-Token budget caps prevent runaway costs. When a budget is exhausted, inference requests are rejected with a clear error until the next hour window.
-
-:::tip
-Managed inference is the simplest way to give your agents access to self-hosted models like DeepSeek or Llama. Platform admins publish models once, and every project in the organization can use them immediately.
-:::
-
 ## Planning councils
 
 Planning councils are a specialized use of harness profiles where multiple models collaborate on a planning task. Define a profile with multiple entries, and the orchestrator runs them in parallel to produce a merged plan.

@@ -210,16 +210,10 @@ The API is organized into the following resource groups.
 | `/orgs/{org_id}/access/bindings` | Role binding management |
 | `/orgs/{org_id}/access/groups` | Group management |
 
-### Inference and models
+### Harnesses
 
 | Endpoint pattern | Purpose |
 |-----------------|---------|
-| `/providers` | LLM provider listing |
-| `/providers/{name}/models` | Provider model discovery |
-| `/models` | Unified model listing (BYOK + managed) |
-| `/inference/managed-models` | Managed model catalog |
-| `/inference/targets` | Inference target configuration |
-| `/inference/v1/chat/completions` | OpenAI-compatible inference proxy |
 | `/harnesses` | Harness auth status and capabilities |
 
 ### Webhooks and events

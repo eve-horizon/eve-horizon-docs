@@ -397,8 +397,6 @@ kubectl config use-context k3d-eve-local
 |-------|---------|-----|
 | `401 Unauthorized` | Token expired or invalid | `eve auth login` |
 | `OAuth token has expired` | Claude/Codex auth stale | `eve auth creds` then `eve auth sync` |
-| `No protocol bridge...` | Harness/provider mismatch | Align managed model harness/provider |
-| `Bridge ... missing base URL` | Bridge env not configured | Set bridge URL and key env vars |
 | `git clone failed` | Repo inaccessible | Set `github_token` or `ssh_key` secret |
 | `service not provisioned` | Environment missing | `eve env create <env>` |
 | `image pull backoff` | Registry auth failed | Verify registry credentials |

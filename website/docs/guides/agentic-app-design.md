@@ -1,6 +1,6 @@
 ---
 title: Agentic App Design
-description: Layer agentic capabilities onto a fullstack Eve app — agents, teams, multi-model inference, memory, events, chat, and coordination.
+description: Layer agentic capabilities onto a fullstack Eve app — agents, teams, multi-model strategy, memory, events, chat, and coordination.
 sidebar_position: 11
 ---
 
@@ -12,7 +12,7 @@ The progression is deliberate:
 
 1. **Agent-native principles** — parity, granularity, composability, emergent capability
 2. **Fullstack foundation** — manifest, services, DB, pipelines, deploys
-3. **This guide** — agents, teams, inference, memory, events, chat, coordination
+3. **This guide** — agents, teams, model strategy, memory, events, chat, coordination
 
 Each layer assumes the previous. Skip none.
 
@@ -153,7 +153,7 @@ graph TD
   I --> L[Final Output]
 ```
 
-## Multi-model inference
+## Multi-model strategy
 
 ### Harness profiles
 
@@ -190,8 +190,6 @@ Design profiles around capability needs, not provider loyalty.
 | Code review, documentation | Medium-reasoning model (sonnet, gemini) |
 | Triage, routing, classification | Fast model (haiku-equivalent, low reasoning) |
 | Specialized domains | Choose the model with strongest domain performance |
-
-Use managed models (`managed/<name>`) for org-wide or project-wide model policies. The registry merges across scopes: platform, then org, then project.
 
 ## Memory design
 
@@ -449,7 +447,7 @@ Use this checklist to evaluate your design. The first section covers the agentic
 - [ ] Gateway policies set intentionally (not everything routable)
 - [ ] Chat routes defined for inbound message handling
 
-**Inference:**
+**Model strategy:**
 - [ ] Harness profiles defined in manifest (agents reference profiles, not harnesses)
 - [ ] Fallback chains in profiles for resilience
 - [ ] Model choice matches task complexity

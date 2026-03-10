@@ -234,23 +234,6 @@ eve env suspend <project> <env> --reason "Balance depleted"
 eve env resume <project> <env>
 ```
 
-## Provider and model discovery
-
-Eve surfaces available LLM providers and models through public endpoints:
-
-```bash
-# List providers
-eve providers list
-
-# List models from a specific provider
-eve providers models <name>
-
-# List all available managed models
-eve models list
-```
-
-Managed models are used by setting `harness_options.model` to `managed/<name>` in the manifest or job creation.
-
 ## OpenTelemetry integration
 
 Eve supports OpenTelemetry (OTEL) for integration with external observability platforms. OTEL uses the OTLP HTTP exporter with automatic Node.js instrumentation.
@@ -311,8 +294,6 @@ eve system logs postgres
 | `eve system logs <service>` | Platform service logs |
 | `eve admin balance show <org_id>` | View org balance |
 | `eve admin usage summary --org <org_id>` | View resource usage |
-| `eve providers list` | List LLM providers |
-| `eve models list` | List available models |
 
 :::note
 Analytics endpoints require `orgs:read` permission. Empty orgs return zeroed summaries rather than 404 errors. The `window` parameter accepts `1d`, `7d`, `30d`, or `90d`.

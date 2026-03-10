@@ -354,18 +354,6 @@ If no model is specified, each harness falls back to its default:
 | `gemini` | -- | Gemini default |
 | `code` / `codex` | -- | Provider default |
 
-### Managed models
-
-Models prefixed with `managed/` are resolved server-side to a provider, credentials, and base URL. The worker injects the resolved connection details into the harness environment so the harness can call the managed endpoint without any BYOK secrets.
-
-Managed model catalog endpoints:
-
-- `GET /inference/managed-models` -- list available managed models
-- `POST /inference/managed-models` -- register a new managed model
-- `DELETE /inference/managed-models/{canonical_model_id}` -- remove a managed model
-
-The `GET /models` endpoint exposes managed models as `managed/<name>` entries for clients.
-
 ### Reasoning effort
 
 Jobs pass `harness_options.reasoning_effort` to control how deeply the model reasons:

@@ -117,13 +117,10 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve analytics](/docs/reference/cli-appendix#eve-analytics) | Org analytics -- job counts, pipeline success rates, environment health |
 | [eve system](/docs/reference/cli-appendix#eve-system) | System health, status, logs, pods, events, orchestrator settings (admin) |
 
-### Inference
+### Teams
 
 | Command | Description |
 |---------|-------------|
-| [eve ollama](/docs/reference/cli-appendix#eve-ollama) | Manage inference targets, remote pulls/model listing, installs, aliases, and route policies |
-| [eve providers](/docs/reference/cli-appendix#eve-providers) | List available AI model providers and endpoints |
-| [eve models](/docs/reference/cli-appendix#eve-models) | Manage inference model aliases and metadata |
 | [eve teams](/docs/reference/cli-appendix#eve-teams) | Create and manage worker teams |
 
 ### Migration
@@ -200,7 +197,6 @@ The CLI reads these environment variables when present:
 | `EVE_PARENT_JOB_ID` | Parent job ID for coordination (set for child jobs) |
 | `EVE_PROJECT_ID` | Current project ID (set automatically in deployed services) |
 | `EVE_ORG_ID` | Current org ID (set automatically in deployed services) |
-| `EVE_MANAGED_OLLAMA_URL` | Base URL for managed Ollama fallback inference |
 | `EVE_DB_URL` | Database URL injected into services |
 | `EVE_ENV_NAME` | Current environment name |
 
