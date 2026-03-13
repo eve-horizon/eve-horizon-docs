@@ -3,11 +3,60 @@
   "source_repo": "incept5/eve-horizon",
   "watch_paths": [
     "docs/system/",
+    "docs/plans/",
     "docs/ideas/agent-native-design.md",
     "docs/ideas/platform-primitives-for-agentic-apps.md",
     "packages/cli/src/commands/",
+    "packages/db/migrations/",
     "AGENTS.md"
   ],
+  "plan_mappings": {
+    "docs/plans/managed-db-snapshot-restore-dr-plan.md": {
+      "pages": ["operations/database.md"],
+      "scope": ["database", "operations"]
+    },
+    "docs/plans/inference-simplification-plan.md": {
+      "pages": ["guides/agents-and-teams.md"],
+      "scope": ["agents", "inference"],
+      "removal": true
+    },
+    "docs/plans/staged-team-dispatch-plan.md": {
+      "pages": ["guides/agents-and-teams.md", "agent-integration/orchestration.md"],
+      "scope": ["agents", "orchestration"]
+    },
+    "docs/plans/agent-runtime-feature-parity-plan.md": {
+      "pages": ["guides/agents-and-teams.md", "reference/harnesses-and-workers.md"],
+      "scope": ["agents", "runtime"]
+    },
+    "docs/plans/chat-progress-updates-plan.md": {
+      "pages": ["guides/chat.md", "agent-integration/chat-gateway.md"],
+      "scope": ["chat"]
+    },
+    "docs/plans/agent-aliases-plan.md": {
+      "pages": ["guides/agents-and-teams.md", "guides/chat.md"],
+      "scope": ["agents", "chat"]
+    },
+    "docs/plans/chat-outbound-delivery-plan.md": {
+      "pages": ["guides/chat.md", "agent-integration/chat-gateway.md"],
+      "scope": ["chat"]
+    },
+    "docs/plans/chat-file-materialization-plan.md": {
+      "pages": ["guides/chat.md"],
+      "scope": ["chat", "storage"]
+    },
+    "docs/plans/private-endpoints-tailscale-plan.md": {
+      "pages": ["guides/services-and-databases.md", "operations/deployment.md"],
+      "scope": ["networking", "deployment"]
+    },
+    "docs/plans/worker-toolchain-on-demand-plan.md": {
+      "pages": ["reference/harnesses-and-workers.md"],
+      "scope": ["workers", "runtime"]
+    },
+    "docs/plans/slack-install-smoothing-plan.md": {
+      "pages": ["guides/chat.md"],
+      "scope": ["chat", "integrations"]
+    }
+  },
   "page_mappings": {
     "get-started/core-concepts.md": {
       "sources": ["AGENTS.md", "docs/system/manifest.md"],
@@ -50,7 +99,7 @@
       "description": "Skills authoring and management"
     },
     "guides/agents-and-teams.md": {
-      "sources": ["docs/system/agents.md", "AGENTS.md", "docs/system/agent-runtime.md", "docs/system/inference-ollama.md"],
+      "sources": ["docs/system/agents.md", "AGENTS.md", "docs/system/agent-runtime.md"],
       "description": "Agent and team configuration"
     },
     "guides/chat.md": {
@@ -158,8 +207,8 @@
       "description": "Observability and logging"
     },
     "operations/database.md": {
-      "sources": ["docs/system/db.md", "docs/system/manifest.md"],
-      "description": "Database operations"
+      "sources": ["docs/system/db.md", "docs/system/manifest.md", "docs/plans/managed-db-snapshot-restore-dr-plan.md"],
+      "description": "Database operations, snapshots, and DR"
     },
     "operations/security.md": {
       "sources": ["docs/system/auth.md", "docs/system/identity-providers.md", "docs/system/agent-sandbox-security.md", "docs/system/agent-secret-isolation.md"],
