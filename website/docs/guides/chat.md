@@ -6,7 +6,7 @@ sidebar_position: 7
 
 # Chat & Conversations
 
-Eve connects agents to messaging platforms through the **chat gateway** — a pluggable service that normalizes external chat events into Eve events. Users talk to agents from Slack, Nostr, or a browser-based WebChat client, and the gateway handles the rest: authentication, routing, job creation, and threaded replies.
+Eve connects agents to messaging platforms through the **chat gateway** — a pluggable service that normalizes external chat events into Eve events. Users talk to agents from Slack, Nostr, or a browser-based WebChat client, and the gateway handles the rest: authentication, routing, job creation, threaded replies, progress updates, and file handling.
 
 ## Chat gateway overview
 
@@ -174,8 +174,24 @@ If identity cannot be resolved, the gateway returns a provider-specific linking 
 
 ### Connecting a Slack workspace
 
+The recommended way to connect a Slack workspace is with a **shareable install link**. An Eve admin generates the link, then sends it to anyone with Slack workspace admin access — no Eve credentials required on the recipient's side.
+
 ```bash
-# Connect a Slack workspace to an org
+# Generate a shareable install link (24h TTL by default)
+eve integrations slack install-url --org <org_id>
+
+# Custom TTL
+eve integrations slack install-url --org <org_id> --ttl 7d
+```
+
+The link redirects to Slack's OAuth consent screen. On approval, Eve exchanges the OAuth code for a bot token and creates the integration automatically. Install links are HMAC-signed, single-use, and expire after the configured TTL.
+
+**Hot-loading**: The gateway detects and initializes new integrations within ~30 seconds — no restart required.
+
+For air-gapped environments or when OAuth is unavailable, a manual fallback is still supported:
+
+```bash
+# Manual connect (requires bot token from Slack app settings)
 eve integrations slack connect \
   --org <org_id> \
   --team-id <T-ID from Slack> \
@@ -225,7 +241,54 @@ Slack retries webhook deliveries when a response takes more than ~3 seconds. The
 
 ### Outbound replies
 
-Responses are delivered via the Slack Web API (`chat.postMessage`), threaded to the originating message.
+When an agent completes a chat-originated job, the orchestrator automatically delivers the result back to the originating Slack thread. No manual `eve job result` needed — the reply appears in the same thread the user started.
+
+The delivery path is:
+
+1. **Orchestrator** detects job completion on a chat-labeled job with a `thread_id` hint.
+2. **API** resolves the thread's provider metadata (channel, thread timestamp, provider credentials).
+3. **Gateway** calls `chat.postMessage` via the Slack Web API, threaded to the originating message.
+
+Delivery status is tracked per message (`pending`, `delivered`, `failed`) and visible in `eve thread messages <thread_id>`.
+
+Long responses are formatted using Slack **Block Kit** — text is chunked into multiple section blocks, supporting up to **39,000 characters** per message. If a result exceeds the limit, it is truncated with a pointer to `eve job result <job_id>` for the full output.
+
+### Progress updates
+
+Agents can send real-time progress messages to the originating Slack thread while a job is running. Users see status updates instead of silence during long-running tasks.
+
+Agents emit progress updates by writing `eve-message` fenced blocks in their output:
+
+````
+```eve-message
+Pulling metrics data from the warehouse...
+```
+````
+
+The `EveMessageRelay` on the agent runtime detects these blocks and delivers them through the same outbound pipeline as final results. Progress delivery is rate-limited to one message every 30 seconds, with a maximum of 10 progress messages per job. Each progress message is capped at 500 characters.
+
+For team dispatch jobs, progress updates are also written to the coordination thread for sibling visibility.
+
+### File attachments
+
+When a user uploads files alongside a Slack message, the gateway downloads them using the bot token and stores them in Eve's internal storage. Files are then staged into the agent's workspace at `.eve/attachments/` before the job starts.
+
+Agents read attached files through a manifest:
+
+```
+.eve/attachments/index.json     # file listing with metadata
+.eve/attachments/<filename>     # the actual files
+```
+
+The `index.json` contains the file name, MIME type, size, and origin for each attachment. Agents are provider-agnostic — they read local files, not Slack URLs.
+
+| Limit | Value |
+|-------|-------|
+| Max files per message | 10 |
+| Max file size | 50 MB |
+| Max total per message | 100 MB |
+
+Files that exceed limits are skipped with a warning. The original provider URL is preserved in metadata as a fallback reference.
 
 ### Listener commands
 
@@ -352,28 +415,34 @@ routes:
 
 When a user writes `@eve <agent-slug> <command>`, the gateway resolves the agent slug across the org and dispatches directly to that agent's project. This **bypasses** `chat.yaml` matching and is intended for cross-project routing.
 
-If the first word is not a known slug, Eve uses the org's `default_agent_slug` and passes the full message as the command.
+Resolution proceeds in order: canonical slug first, then **alias**, then the org's default agent. Aliases are short vanity names declared in `agents.yaml` — for example, an agent with slug `pmbot-pm` can declare alias `pm`, so users type `@eve pm hello` instead of `@eve pmbot-pm hello`. See [Agents & Teams](./agents-and-teams.md) for alias configuration.
+
+If neither slug nor alias matches a known agent, Eve uses the org's `default_agent_slug` and passes the full message as the command.
 
 ## Message flow
 
-The following sequence shows the end-to-end path of a chat message from Slack through to an agent reply:
+The following sequence shows the end-to-end path of a chat message from Slack through to an agent reply, including file materialization, progress updates, and outbound delivery:
 
 ```mermaid
 sequenceDiagram
     participant U as User (Slack)
     participant G as Gateway
+    participant S as Storage
     participant R as Router
     participant A as Agent
-    participant J as Job Engine
-    U->>G: @eve coder review PR #42
-    G->>G: Validate signature
-    G->>R: Normalized message
-    R->>R: Resolve slug "coder"
+    participant O as Orchestrator
+    U->>G: @eve coder review PR #42 [+ file]
+    G->>G: Validate signature + resolve identity
+    G->>S: Download file, upload to Eve storage
+    G->>R: Normalized message (eve-storage refs)
+    R->>R: Resolve slug or alias
     R->>A: Dispatch to agent
-    A->>J: Create job
-    J-->>A: Job result
-    A-->>G: Reply payload
-    G-->>U: Threaded reply in Slack
+    Note over A: Files staged at .eve/attachments/
+    A->>G: Progress: "Reviewing PR..."
+    G->>U: Progress update in thread
+    A->>O: Job complete
+    O->>G: Deliver result
+    G->>U: Threaded reply in Slack
 ```
 
 ## Threads and continuity
@@ -513,6 +582,10 @@ The gateway exposes several endpoints for chat operations:
 | `POST /gateway/providers/slack/interactive` | Slack interactive actions ingress |
 | `GET /internal/orgs/{org_id}/agents` | Agent directory (filtered by exposure policy) |
 | `POST /internal/orgs/{org_id}/chat/route` | Slug-based routing (enforces `routable` policy) |
+| `POST /internal/projects/{project_id}/chat/deliver` | Outbound delivery (orchestrator to API) |
+| `POST /gateway/internal/deliver` | Outbound delivery (API to gateway provider) |
+| `POST /internal/storage/chat-attachments/presign` | Presigned URLs for file upload/download |
+| `GET /integrations/slack/install?token=...` | Public Slack install (signed token) |
 | `POST /gateway/providers/simulate` | Simulate via gateway routing |
 | `POST /projects/{project_id}/chat/simulate` | Legacy project-scoped simulate API |
 | `POST /chat/listen` | Subscribe an agent to a channel/thread |

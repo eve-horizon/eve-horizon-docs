@@ -1,3 +1,8 @@
+---
+name: sync-docs
+description: Synchronize eve-horizon-docs with the eve-horizon platform source using the GitHub API. Fetches plans, feat commits, and system doc changes, then cascades updates to published documentation pages.
+---
+
 # Sync Docs
 
 Synchronize eve-horizon-docs with the eve-horizon platform source using the

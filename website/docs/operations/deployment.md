@@ -1,6 +1,6 @@
 ---
 title: Deployment Guide
-description: Deploy services to Kubernetes with zero-downtime rollouts, pipeline-driven workflows, and automatic health checking.
+description: Deploy services to Kubernetes with zero-downtime rollouts, pipeline-driven workflows, private endpoint networking, and automatic health checking.
 sidebar_position: 1
 ---
 
@@ -69,9 +69,22 @@ App ingresses can be issued TLS certificates automatically via cert-manager:
 
 When `EVE_DEFAULT_TLS_CLUSTER_ISSUER` is set, every app ingress includes a `tls` block and cert-manager annotations so certificates are issued per host automatically.
 
+### Private endpoint networking
+
+Services registered as [private endpoints](/docs/guides/services-and-databases#private-endpoints) are accessible from any pod in the cluster via the `eve-tunnels` namespace. Eve creates an `ExternalName` Service that routes through the Tailscale Kubernetes Operator's egress proxy to a device on your tailnet.
+
+From a deployment perspective, private endpoints are infrastructure — they exist independently of any specific environment or deploy cycle. Once registered with `eve endpoint add`, the in-cluster DNS name is immediately available to all deployed services, agent runtime pods, and worker runner pods. No per-environment configuration or deploy-time wiring is needed beyond setting the appropriate secrets.
+
+Check endpoint health before deploying services that depend on private connectivity:
+
+```bash
+eve endpoint show lmstudio --verbose
+eve endpoint diagnose lmstudio
+```
+
 ## Deployment strategies
 
-Eve supports two deployment paths: **pipeline deploy** and **direct deploy**. The path is determined by your environment configuration.
+Eve supports two deployment paths: **pipeline deploy** and **direct deploy**, plus a **fast-path** helper for local development. The path is determined by your environment configuration.
 
 ### Pipeline deploy (recommended)
 
@@ -112,6 +125,26 @@ eve env deploy staging --ref main --repo-dir . --direct
 ```
 
 Direct deploys skip build and release steps -- useful when you already have a release or need to redeploy an existing image.
+
+### Fast-path app deploy (local k3d)
+
+For local k3d development, the `eh app` helper orchestrates the full build-import-deploy cycle in a single command. It builds the Docker image, imports it into the k3d cluster, and triggers a direct deploy — skipping the registry round-trip entirely:
+
+```bash
+# Build, import, and deploy in one step
+eh app deploy my-project staging ../my-app
+
+# Or run each step individually
+eh app build ../my-app              # docker build
+eh app import                       # k3d image import
+eve env deploy my-project staging --direct --image-tag local
+```
+
+The fast path uses `--direct` and `--skip-preflight` under the hood, making the feedback loop significantly faster for local iteration. Image tags default to `local` and can be overridden with `--tag`.
+
+:::info
+`eh app` is a local development tool. For staging and production, use the standard pipeline deploy path which handles image builds, registry pushes, and release tracking.
+:::
 
 ### Manifest auto-sync on deploy
 
@@ -287,6 +320,40 @@ eve env rollback production --release rel_xxx --project proj_xxx
 eve env reset <project> <env>
 ```
 
+## Teardown and Cleanup
+
+### Undeploy (keep config)
+
+Take an environment offline while preserving its configuration, secrets, and history. The K8s resources are torn down but the environment record remains and can be redeployed later.
+
+```bash
+eve env undeploy <env> --project <id>
+```
+
+### Delete environment (permanent)
+
+Permanently remove an environment and its K8s namespace. This is irreversible.
+
+```bash
+eve env delete <env> --project <id> [--force]
+```
+
+### Delete project (cascades to all environments)
+
+Delete a project and all its environments, jobs, builds, and releases. Use `--hard` for permanent deletion.
+
+```bash
+eve project delete <id> [--hard] [--force]
+```
+
+### Delete organization (cascades to all projects)
+
+Delete an organization and everything it contains. Use `--hard` for permanent deletion.
+
+```bash
+eve org delete <id> [--hard] [--force]
+```
+
 ## Deployment monitoring
 
 ### Real-time observation
@@ -456,8 +523,15 @@ Docker Compose mode is for development only. It exposes services on localhost wi
 | `eve env recover <project> <env>` | Recover a degraded or broken environment |
 | `eve env rollback <env> --release <id>` | Roll back to a previous release |
 | `eve env reset <project> <env>` | Recreate environment resources from scratch |
+| `eve env undeploy <env> --project <id>` | Tear down K8s deployment, keep config |
+| `eve project delete <id> [--hard] [--force]` | Delete project and cascade to all environments |
+| `eve org delete <id> [--hard] [--force]` | Delete organization and cascade to all projects |
 | `eve release list --project <id>` | List releases for rollback |
 | `eve local up` | Start local k3d cluster |
 | `eve local health` | Check local cluster health |
+| `eve endpoint list` | List private endpoints for an org |
+| `eve endpoint show <name>` | Show endpoint details and cluster DNS |
+| `eve endpoint diagnose <name>` | Run connectivity diagnostics on an endpoint |
+| `eh app deploy <project> <env> [dir]` | Fast-path build, import, and deploy to local k3d |
 
 See [CLI Commands](/docs/reference/cli-commands) for the full command reference.

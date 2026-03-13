@@ -182,7 +182,7 @@ eve api call coordinator GET /api/nodes --print-curl
 
 #### Automatic API instructions
 
-When creating a job that should interact with app APIs, pass `--with-apis` to inject discovery instructions into the job description automatically:
+When creating a job that should interact with app APIs, use `--with-apis` to inject discovery instructions into the job description automatically:
 
 ```bash
 eve job create \
@@ -191,6 +191,43 @@ eve job create \
 ```
 
 The agent receives an instruction block telling it which APIs are available, how to call them, and that auth is handled. Pass multiple APIs with comma separation: `--with-apis coordinator,analytics`.
+
+#### Server-side `with_apis`
+
+`with_apis` is a first-class server-side primitive, not just a CLI convenience. The `app_apis` field in job hints is validated and resolved by the server regardless of how the job is created:
+
+| Entry point | How `app_apis` reaches the server |
+|-------------|-----------------------------------|
+| CLI `--with-apis` | Passed as `hints.app_apis` in the job create payload |
+| Workflow `with_apis` | Extracted from the workflow definition at invocation time |
+| SDK `createJob` | Provided in the `hints` object directly |
+| API `POST /jobs` | Included in the `hints` body field |
+
+In all cases, the server validates each API name against the project's registered APIs, generates the instruction block, and appends it to the job description.
+
+#### Workflow-level `with_apis`
+
+Workflows declare API access at the workflow level. All steps inherit the declaration, and individual steps can override it with their own `with_apis`:
+
+```yaml
+workflows:
+  data-pipeline:
+    with_apis:
+      - coordinator
+    steps:
+      - name: ingest
+        agent:
+          name: ingestion
+      - name: analyze
+        depends_on: [ingest]
+        with_apis:
+          - coordinator
+          - analytics
+        agent:
+          name: analyst
+```
+
+Each child job in the workflow receives the appropriate API instruction block. See [Workflows Reference](/docs/reference/workflows#app-api-access-with_apis) for the full schema.
 
 ### Verifying agent tokens
 
@@ -276,6 +313,7 @@ The following table summarizes the primitives available for building agent-nativ
 | **Jobs** | Create, orchestrate, and compose into hierarchies | [eve job](/docs/reference/cli-appendix#eve-job) |
 | **Agents & Teams** | Personas, dispatch modes, chat routing | [eve agents](/docs/reference/cli-appendix#eve-agents) |
 | **Pipelines** | Deterministic build/deploy sequences | [eve pipeline](/docs/reference/cli-appendix#eve-pipeline) |
+| **Workflows** | Named job DAGs with API access and triggers | [eve workflow](/docs/reference/cli-appendix#eve-workflow) |
 | **Gateway** | Multi-provider chat with agent discovery | [eve chat](/docs/reference/cli-appendix#eve-chat) |
 | **Builds & Releases** | Immutable artifacts with promotion | [eve build](/docs/reference/cli-appendix#eve-build) |
 | **Skills** | Knowledge distribution via SKILL.md | [eve agents sync](/docs/reference/cli-appendix#eve-agents-sync) |

@@ -55,6 +55,14 @@
     "docs/plans/slack-install-smoothing-plan.md": {
       "pages": ["guides/chat.md"],
       "scope": ["chat", "integrations"]
+    },
+    "docs/plans/invoke-parity-and-shared-module-plan.md": {
+      "pages": ["reference/harnesses-and-workers.md"],
+      "scope": ["runtime", "workers"]
+    },
+    "docs/plans/eden-platform-gap-closure-plan.md": {
+      "pages": ["reference/workflows.md", "agent-integration/agent-native-design.md"],
+      "scope": ["workflows", "agents", "platform"]
     }
   },
   "page_mappings": {
@@ -187,8 +195,8 @@
       "description": "Job orchestration patterns"
     },
     "agent-integration/chat-gateway.md": {
-      "sources": ["docs/system/chat-gateway.md"],
-      "description": "Chat gateway integration"
+      "sources": ["docs/system/chat-gateway.md", "docs/system/integrations.md"],
+      "description": "Chat gateway integration (inbound, outbound delivery, file materialization, progress)"
     },
     "agent-integration/threads.md": {
       "sources": ["docs/system/threads.md", "docs/system/agents.md"],

@@ -33,15 +33,29 @@ Every Eve org gets S3-compatible object storage backed by the platform's storage
 
 ### Supported backends
 
-The platform supports multiple S3-compatible backends. Your org administrator selects the backend; your code interacts with the same API regardless of which one is active.
+The platform supports multiple storage backends behind a unified `ObjectStorageClient` interface. Your org administrator selects the backend; your code interacts with the same API regardless of which one is active.
 
-| Backend | Notes |
-|---------|-------|
-| MinIO | Default for local development |
-| AWS S3 | Cloud-native deployments |
-| Google Cloud Storage | S3-compatible XML API via HMAC keys |
-| Cloudflare R2 | Zero egress fees |
-| Tigris | S3-compatible |
+| Backend | Auth | Notes |
+|---------|------|-------|
+| MinIO | Access key / secret | Default for local development |
+| AWS S3 | IAM / access key | Cloud-native deployments |
+| Google Cloud Storage (native) | Workload Identity / ADC | No static keys needed on GKE |
+| Google Cloud Storage (HMAC) | HMAC access key / secret | S3-compatible XML API path |
+| Cloudflare R2 | Access key / secret | Zero egress fees |
+| Tigris | Access key / secret | S3-compatible |
+
+#### Native GCS via Workload Identity
+
+When running on GKE, Eve can authenticate to Google Cloud Storage using Workload Identity instead of static HMAC keys. Set `EVE_STORAGE_BACKEND=gcs` and omit the HMAC credentials -- the platform automatically uses Application Default Credentials (ADC) to authenticate.
+
+This means no service account keys are stored as secrets and no key rotation is required. The GCS client module is only loaded at runtime when this path is active, so AWS deployments are completely unaffected.
+
+| Configuration | Behavior |
+|---------------|----------|
+| `EVE_STORAGE_BACKEND=gcs` + no HMAC keys | Native GCS client with Workload Identity |
+| `EVE_STORAGE_BACKEND=gcs` + HMAC keys set | S3-compatible client via HMAC (existing behavior) |
+| `EVE_STORAGE_BACKEND=s3` | AWS S3 client (unchanged) |
+| `EVE_STORAGE_BACKEND=minio` | MinIO client (unchanged) |
 
 ### How transfers work
 

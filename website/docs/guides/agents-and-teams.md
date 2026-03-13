@@ -28,6 +28,7 @@ version: 1
 agents:
   mission-control:
     slug: mission-control
+    alias: mc                # short name for chat: @eve mc deploy to staging
     description: "Primary orchestration agent for deploys and incident response"
     skill: eve-orchestration
     workflow: assistant
@@ -53,6 +54,7 @@ agents:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `slug` | No | Org-unique identifier for chat routing. Lowercase alphanumeric + dashes. |
+| `alias` | No | Short vanity name for chat addressing (see [Agent aliases](#agent-aliases)) |
 | `description` | No | Human-readable summary of the agent's purpose |
 | `skill` | Yes | Name of the installed skill that defines this agent's capability |
 | `workflow` | No | Named workflow to execute (from `workflows` in the manifest) |
@@ -128,6 +130,51 @@ gateway:
 
 Default to `none`. Make agents `routable` only when they should receive direct messages from chat. `discoverable` is useful for agents that should appear in listings but only respond when routed through a team.
 
+### Agent aliases
+
+Agent slugs are always prefixed with the project slug to ensure org-wide uniqueness. An agent with slug `pm` in project `pmbot` becomes `pmbot-pm`. In Slack, users must type `@eve pmbot-pm hello` — clunky and hard to remember.
+
+Aliases solve this. An alias is a short, human-chosen vanity name that bypasses the prefixed slug for chat addressing:
+
+```yaml
+agents:
+  pm:
+    slug: pm
+    alias: pm              # users type: @eve pm hello
+    skill: pm-coordinator
+    gateway:
+      policy: routable
+  tech-lead:
+    slug: tech-lead
+    alias: tech            # users type: @eve tech review this
+    skill: tech-lead
+    gateway:
+      policy: routable
+```
+
+After sync with project slug `pmbot`, the canonical slugs are `pmbot-pm` and `pmbot-tech-lead` (still work), but users can address these agents as `@eve pm hello` and `@eve tech review this`.
+
+**Resolution order** is backwards-compatible — existing slugs always resolve first:
+
+1. **Slug match** — `@eve pmbot-pm hello` routes directly
+2. **Alias match** — `@eve pm hello` resolves via alias
+3. **Org default** — `@eve hello` falls back to the organization's default agent
+4. **Error** — no match and no default configured
+
+**Namespace rules:**
+
+- Aliases and slugs share the same routing namespace. If project A has slug `pm`, project B cannot claim alias `pm`.
+- The namespace is org-scoped and case-insensitive.
+- Platform-reserved words (`agents`, `help`, `status`, `eve`, `admin`, `system`, `health`) cannot be used as aliases — they conflict with gateway management commands.
+- Aliases are optional. If omitted, the agent is reachable only by its canonical prefixed slug.
+
+The `@eve agents list` command shows aliases alongside canonical slugs:
+
+```
+pmbot-pm (-> pm) -- pmbot (PM Coordinator)
+devbot-code (-> code) -- devbot (Code Review Agent)
+```
+
 ## Agent runtime and warm pods
 
 When a chat message arrives for an agent, Eve needs somewhere to execute it. The **agent runtime** provides pre-provisioned, org-scoped containers — warm pods — that are ready to handle requests immediately, eliminating cold-start latency for conversational flows.
@@ -161,6 +208,12 @@ eve agents runtime-status
 Start with inline mode. If you observe resource contention or need stricter isolation for specific agents, switch those agents to runner mode selectively via environment overrides rather than changing the global setting.
 :::
 
+### Per-job HOME isolation
+
+Each job attempt runs with its own isolated `HOME` directory. The platform creates a dedicated home for every attempt, pre-populates it with the necessary directory structure, and sets `HOME` and `EVE_JOB_USER_HOME` in the harness environment. This prevents cross-job interference — credentials, shell history, and tool configuration from one job cannot leak into another, even when multiple jobs share the same warm pod via inline execution.
+
+Both the agent runtime and the worker enforce this isolation. The job home is cleaned up after the attempt completes.
+
 ## Teams and dispatch modes
 
 Teams group agents under a lead for coordinated work. When work is dispatched to a team, the lead agent orchestrates the members according to the team's dispatch mode.
@@ -181,6 +234,15 @@ teams:
       lead_timeout: 300
       member_timeout: 300
       merge_strategy: majority
+
+  expert-panel:
+    lead: pm-coordinator
+    members: [tech-lead, ux-advocate, biz-analyst, risk-assessor]
+    dispatch:
+      mode: council
+      staged: true             # lead prepares before members start
+      lead_timeout: 3600
+      member_timeout: 300
 
   deploy-ops:
     lead: ops-lead
@@ -215,6 +277,15 @@ graph TD
         C_C --> C_Merge
     end
 
+    subgraph Staged Council
+        S_Lead1[Lead: Prepare] --> S_A[Agent A]
+        S_Lead1 --> S_B[Agent B]
+        S_Lead1 --> S_C[Agent C]
+        S_A --> S_Lead2[Lead: Synthesize]
+        S_B --> S_Lead2
+        S_C --> S_Lead2
+    end
+
     subgraph Relay
         R_Lead[Lead] --> R_A[Agent A]
         R_A --> R_B[Agent B]
@@ -230,7 +301,7 @@ dispatch:
   max_parallel: 3
 ```
 
-**Council** sends the same prompt to all members and merges their responses using a merge strategy. Use council for collective judgment — code reviews, security audits, design decisions.
+**Council** sends the same prompt to all members and merges their responses using a merge strategy. Use council for collective judgment — code reviews, security audits, design decisions. Council supports an optional [staged mode](#staged-council-dispatch) where the lead prepares work before members start.
 
 ```yaml
 dispatch:
@@ -251,9 +322,54 @@ dispatch:
 |----------|------|-----|
 | Implement multiple features in parallel | `fanout` | Independent work, no dependencies between members |
 | Review a pull request from multiple perspectives | `council` | Multiple opinions merged into a single verdict |
+| Transcribe a recording, then fan out to domain experts | `council` + `staged` | Lead prepares content before members start |
 | Research, implement, then test | `relay` | Each stage depends on the previous stage's output |
 
 Most work is fanout. Use council only when multiple perspectives genuinely improve the outcome. Use relay only when stages are strictly sequential.
+
+### Staged council dispatch
+
+Standard council mode starts the lead and all members simultaneously. This breaks down when the lead needs to prepare material before members can work — for example, transcribing a meeting recording before domain experts analyze it, or triaging an incident before investigators fan out.
+
+Staged dispatch solves this by splitting council execution into three phases:
+
+```mermaid
+graph LR
+    A[Lead: Prepare] --> B[Members: Parallel Work]
+    B --> C[Lead: Synthesize]
+```
+
+Enable it with the `staged` flag on a council dispatch:
+
+```yaml
+teams:
+  expert-panel:
+    lead: pm-coordinator
+    members:
+      - tech-lead
+      - ux-advocate
+      - biz-analyst
+      - risk-assessor
+    dispatch:
+      mode: council
+      staged: true
+      lead_timeout: 3600
+      member_timeout: 300
+```
+
+**How it works:**
+
+1. **Dispatch** — the platform creates the lead job in `ready` phase and member jobs in `backlog` phase. Members are visible immediately (`eve job list` shows the full roster) but will not be claimed by the orchestrator.
+2. **Prepare** — the lead runs first. It processes attachments, transcribes audio, gathers context, and posts prepared material to the coordination thread. When ready, it returns `eve.status = "prepared"`.
+3. **Promote** — the orchestrator sees the `prepared` signal, promotes all `backlog` members to `ready`, and requeues the lead with a `children.all_done` wake condition.
+4. **Parallel work** — members are claimed and run in parallel. Each reads the coordination thread for the lead's prepared content and returns its analysis.
+5. **Synthesize** — when all members complete, the lead wakes and reads their summaries from the coordination thread. It produces a final synthesis and returns `eve.status = "success"`.
+
+If the lead completes without returning `prepared` (handles the request solo, or fails), any members still in `backlog` are automatically cancelled.
+
+:::tip
+Staged dispatch is only valid with `mode: council`. The `staged` flag is rejected on fanout and relay modes. If you need sequential preparation followed by sequential processing, use relay with the lead as the first link in the chain.
+:::
 
 ## Syncing agent configuration
 
@@ -274,7 +390,7 @@ Sync performs several operations:
 1. Reads `agents.yaml`, `teams.yaml`, and `chat.yaml` from the paths specified in the manifest
 2. Resolves AgentPacks from `x-eve.packs` and writes `.eve/packs.lock.yaml`
 3. Deep-merges pack agents, teams, and chat config with local overrides
-4. Validates org-wide slug uniqueness
+4. Validates org-wide slug and alias uniqueness (aliases cannot collide with slugs or reserved names)
 5. Pushes the merged configuration to the API
 
 ### Pack overlay

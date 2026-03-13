@@ -1,6 +1,6 @@
 ---
 title: Harnesses & Workers
-description: Harness lifecycle, adapter architecture, worker types, permission policies, profiles, and model selection.
+description: Harness lifecycle, adapter architecture, worker types, toolchain-on-demand, shared invoke module, permission policies, profiles, and model selection.
 sidebar_position: 9
 ---
 
@@ -107,7 +107,83 @@ All images are published to public ECR and versioned using git tags (format: `wo
 | **kotlin** | `public.ecr.aws/.../worker-kotlin:<version>-kotlin2.0-jdk21` | Kotlin 2.0 + OpenJDK 21 |
 | **full** | `public.ecr.aws/.../worker-full:<version>` | All toolchains combined |
 
-The `full` variant is used by default for local development. Override via `EVE_WORKER_VARIANT` (e.g., `EVE_WORKER_VARIANT=base` for a slimmer image). Each variant is built independently to optimize build caching and image size.
+The `base` image (~800 MB) is the default for both staging and local development. Override via `EVE_WORKER_VARIANT` (e.g., `EVE_WORKER_VARIANT=full` for the combined image). Each variant is built independently to optimize build caching and image size.
+
+### Toolchain-on-demand
+
+Most agent jobs only need Node.js and AI harness binaries, all of which are included in the `base` image. When a job does need a language toolchain, Eve injects it at pod creation time through Kubernetes init containers rather than shipping a single large image.
+
+```mermaid
+graph TD
+  A[Runner Pod created] --> B{Toolchains declared?}
+  B -- No --> C[Start with base image only]
+  B -- Yes --> D[Init container per toolchain]
+  D --> E["Copy /toolchain/* → /opt/eve/toolchains/{name}/"]
+  E --> F[Extend PATH via EVE_TOOLCHAIN_PATHS]
+  F --> G[Start runner container]
+```
+
+Each init container runs a small, single-purpose image that copies its payload into a shared `emptyDir` volume at `/opt/eve/toolchains/{name}/`. The runner entrypoint then prepends those paths to `PATH` and sources any `env.sh` files the toolchain ships (for example, Rust sets `RUSTUP_HOME` and `CARGO_HOME`).
+
+#### Available toolchains
+
+| Toolchain | Contents | Notes |
+|-----------|----------|-------|
+| `python` | Python 3, pip, uv | Sets up `python3` and `uv` in PATH |
+| `media` | ffmpeg, ffprobe, whisper-cli, ggml-small.en model | For audio/video processing |
+| `rust` | Rust stable via rustup, cargo, rustfmt, clippy | Sets `RUSTUP_HOME` and `CARGO_HOME` |
+| `java` | Temurin JDK 21 | Sets `JAVA_HOME` |
+| `kotlin` | Kotlin 2.0 + JDK 21 | Bundles its own JDK; sets `JAVA_HOME` |
+
+#### Declaring toolchains in agent config
+
+Agents declare which toolchains they need in the agent configuration. The orchestrator resolves these at job creation time and passes them to the runner pod.
+
+```yaml
+# eve/agents.yaml
+version: 1
+agents:
+  data-analyst:
+    name: Data Analyst
+    skill: analyze-data
+    harness_profile: claude-sonnet
+    toolchains: [python]
+
+  doc-processor:
+    name: Document Processor
+    skill: process-documents
+    harness_profile: claude-sonnet
+    toolchains: [media]
+
+  full-stack:
+    name: Full Stack Dev
+    skill: full-stack-dev
+    harness_profile: claude-opus
+    toolchains: [python, rust, java]
+```
+
+Workflows can override the agent default per step:
+
+```yaml
+# eve/workflows.yaml
+steps:
+  - name: process
+    agent: doc-processor
+    toolchains: [media, python]   # overrides agent default
+```
+
+When no `toolchains` field is present, the job runs on the base image with no init containers.
+
+#### Why init containers over fat images
+
+| Concern | Fat image (`full`, 2.6 GB) | Base + init containers |
+|---------|---------------------------|------------------------|
+| Node disk pressure | 2.6 GB cached per version | 800 MB base + 50--300 MB per toolchain |
+| Cold pull time | ~45 s | ~15 s base + ~5 s per toolchain |
+| Toolchain update | Rebuild and repull 2.6 GB | Repull only the changed toolchain |
+| Kubelet GC | All-or-nothing 2.6 GB blob | Small images GC'd independently |
+
+The `full` image remains available via `EVE_WORKER_VARIANT=full` for cases where every toolchain is needed.
 
 ### Worker routing
 
@@ -240,6 +316,44 @@ All worker images enforce a deterministic environment contract to ensure consist
 
 Processes run as UID 1000 (non-root). The entrypoint verifies all required paths are writable and fails fast if any permission check fails. On Kubernetes, runner pods use `runAsUser: 1000` / `fsGroup: 1000` to enforce correct ownership on volume mounts.
 
+## Shared invoke module
+
+The worker and agent-runtime share a common invoke module at `packages/shared/src/invoke/`. This module is the single source of truth for all agent-execution logic -- both services import from it, and new features are added here once rather than duplicated.
+
+### What the shared module provides
+
+| Module | Capabilities |
+|--------|-------------|
+| `budget-enforcement` | Per-job token and cost budgets, `llm.call` tracking, automatic kill on overshoot |
+| `carryover-context` | Memory, org docs, and parent-job attachments materialized into the workspace |
+| `security-policy` | Security `CLAUDE.md` generation and placement into `CLAUDE_CONFIG_DIR` |
+| `eve-message-relay` | Bidirectional message relay for coordination threads and chat delivery |
+| `workspace-secrets` | Secret resolution, git auth, materialization, and cleanup |
+| `workspace-hooks` | Acquire and release hooks (e.g., `on-clone`, skill installation) |
+| `result-extraction` | Result text, JSON, token usage, and structured error extraction (including Codex formats) |
+| `harness-lifecycle` | Start/end lifecycle events with harness name, model, and duration |
+| `resource-hydration` | Resource hydration with typed events |
+| `coordination` | Coordination inbox and thread context |
+| `git-utils` | Git operations, local repo path resolution, attempt metadata |
+| `eve-credentials` | Eve CLI credential writing (supports per-job isolated HOME) |
+| `job-user-home` | Per-job HOME directory creation and cleanup |
+
+All capabilities listed above are available in both the worker and the agent-runtime. Agent jobs (which route to agent-runtime) have full access to budget enforcement, carryover context, security policy, message relay, and workspace secrets -- the same set of features available in the worker.
+
+### Per-job HOME isolation
+
+Each job attempt gets its own isolated HOME directory so that credential files -- Eve CLI auth, GitHub CLI tokens, harness configs -- are scoped to the job and invisible to other concurrent jobs.
+
+```
+/tmp/eve/agent-homes/<attemptId>/home/
+  .config/eve/         # Eve CLI credentials
+  .config/gh/          # GitHub CLI auth
+  .claude/             # Claude config
+  .eve/harnesses/      # Harness config
+```
+
+The harness process runs with `HOME` overridden to this directory and `EVE_JOB_USER_HOME` set to the same path. Credential writers (e.g., `writeEveCredentials`) target the isolated home when it is present. The directory is cleaned up after the attempt completes.
+
 ## Permission policies
 
 Each harness maps the abstract permission policy to its own CLI flags. The policy controls what the agent is allowed to do with the file system and external tools.
@@ -327,6 +441,17 @@ Reference a profile by name in `harness_profile`:
 ```
 
 Skills should always reference profiles rather than hardcoding specific harnesses.
+
+### Profile resolution for chat-routed jobs
+
+Harness profiles are resolved for all job creation paths, including chat-routed jobs. When a message arrives through the chat gateway, Eve resolves the `harness_profile` name to a concrete harness and `harness_options` using the project manifest's `x-eve.agents.profiles` section. This applies to:
+
+- Direct agent routing (gateway message to agent target)
+- Team lead and coordinator parent jobs
+- Team relay and fanout member child jobs
+- Direct slug routing (`routeMessageToAgent`)
+
+Profiles defined in agent packs are also resolved correctly. The agent sync process stores the resolved `x-eve` YAML alongside the agent config, and profile resolution checks the agent config first with a manifest fallback for backward compatibility.
 
 ## Model selection
 

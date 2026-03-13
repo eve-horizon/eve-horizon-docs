@@ -433,6 +433,44 @@ eve env reset staging
 
 Reset clears the environment's deployment state without deploying anything. Use it to recover from stuck or corrupted state when `rollback` is not sufficient.
 
+## Undeploying an environment
+
+Undeploying takes an environment offline by tearing down its K8s resources (pods, services, ingress) while preserving the environment record and configuration. This is useful when you want to stop incurring compute costs but plan to redeploy later.
+
+```bash
+eve env undeploy test --project proj_xxx
+```
+
+After undeploying, the environment record persists with `deploy_status = 'undeployed'`. All configuration, secrets, and history remain intact. Redeploy at any time:
+
+```bash
+eve env deploy proj_xxx test --tag <tag>
+```
+
+Use `--force` to skip the confirmation prompt:
+
+```bash
+eve env undeploy test --project proj_xxx --force
+```
+
+## Deleting an environment
+
+Deleting permanently removes an environment, including its K8s namespace and all associated resources. This is irreversible.
+
+```bash
+eve env delete test --project proj_xxx
+```
+
+Use `--force` to skip the confirmation prompt:
+
+```bash
+eve env delete test --project proj_xxx --force
+```
+
+:::caution
+Deleting an environment destroys its K8s namespace, deployed workloads, and all environment-scoped data. Use `eve env undeploy` if you only want to take the environment offline while keeping the configuration for later redeployment.
+:::
+
 ## Platform environment variables
 
 Eve automatically injects environment variables into all deployed services so they can interact with the platform:

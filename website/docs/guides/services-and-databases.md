@@ -1,6 +1,6 @@
 ---
 title: Services & Databases
-description: Define services, managed databases, health checks, persistent storage, and inter-service dependencies in your Eve manifest.
+description: Define services, managed databases, health checks, persistent storage, private endpoints, and inter-service dependencies in your Eve manifest.
 sidebar_position: 2
 ---
 
@@ -444,6 +444,98 @@ services:
 | `target` | Absolute path in the container |
 
 File mounts are read from the repository at the deployed git SHA, ensuring the container always receives the version of the file that matches the deployed code.
+
+## Private endpoints
+
+Some services live outside your cluster — a GPU machine on your office network, an LM Studio instance on a Mac Mini, an internal API behind a VPN. Eve's private endpoints make these Tailscale-connected services accessible to every pod in the cluster without sidecars, proxies, or per-pod networking configuration.
+
+### How it works
+
+Private endpoints use the [Tailscale Kubernetes Operator](https://tailscale.com/docs/features/kubernetes-operator) to create an egress proxy in a dedicated `eve-tunnels` namespace. Eve manages the K8s `ExternalName` Service that bridges cluster DNS to the tailnet device. Your apps connect using a stable, predictable in-cluster URL — no Tailscale configuration needed in application code.
+
+```mermaid
+graph LR
+    A[App Pod] --> B[K8s Service in eve-tunnels]
+    B --> C[Tailscale Egress Proxy]
+    C --> D[Tailnet Device]
+```
+
+Every private endpoint gets a DNS name following this pattern:
+
+```
+http://<orgSlug>-<name>.eve-tunnels.svc.cluster.local:<port>
+```
+
+This URL works from app pods, agent runtime pods, and worker runner pods alike.
+
+### Registering an endpoint
+
+Use the `eve endpoint` CLI to register a private endpoint backed by a Tailscale device:
+
+```bash
+# Register a private endpoint
+eve endpoint add \
+  --name lmstudio \
+  --tailscale-hostname mac-mini.tail12345.ts.net \
+  --port 1234
+
+# List registered endpoints
+eve endpoint list
+
+# Show endpoint details and connectivity status
+eve endpoint show lmstudio
+
+# Run diagnostics
+eve endpoint diagnose lmstudio
+
+# Remove an endpoint
+eve endpoint remove lmstudio
+```
+
+On success, `eve endpoint add` prints the in-cluster URL. The endpoint is org-scoped — names must be DNS-safe and are unique per organization.
+
+### Connecting your services
+
+Wire the endpoint URL into your services via secrets. This follows the standard BYOK (bring your own key) pattern — Eve provides the connectivity, you configure the environment variables:
+
+```bash
+# Store the endpoint URL as a secret
+eve secrets set LLM_BASE_URL \
+  "http://myorg-lmstudio.eve-tunnels.svc.cluster.local:1234/v1" \
+  --scope project
+
+# Store any auth keys the service requires
+eve secrets set LLM_API_KEY "your-api-key" --scope project
+```
+
+Then reference the secrets in your manifest:
+
+```yaml
+services:
+  api:
+    environment:
+      LLM_BASE_URL: ${secret.LLM_BASE_URL}
+      LLM_API_KEY: ${secret.LLM_API_KEY}
+```
+
+Your application code uses these environment variables directly — no Eve-specific SDK or client is needed:
+
+```typescript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: process.env.LLM_BASE_URL,
+  apiKey: process.env.LLM_API_KEY,
+});
+```
+
+### Prerequisites
+
+The Tailscale Kubernetes Operator must be installed in the cluster before `eve endpoint add` can create tunnel services. The command checks for the operator and fails with guidance if it is not found. Operator installation is a one-time infrastructure task — see your cluster administrator or the [Tailscale operator docs](https://tailscale.com/docs/features/kubernetes-operator) for setup.
+
+:::tip
+For local k3d development where the host machine is already on the tailnet, k3d containers can often route to Tailscale IPs directly via Docker bridge networking. In this case you can skip the operator and set the Tailscale IP in your secrets with `eve secrets set`. Validate connectivity with `kubectl run curl --image=curlimages/curl --rm -it -- curl http://100.x.x.x:1234/v1/models` before relying on this shortcut.
+:::
 
 ## External services
 

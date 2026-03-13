@@ -291,6 +291,82 @@ teams:
       merge_strategy: majority
 ```
 
+### Staged team dispatch
+
+Staged dispatch is an option on council mode that lets the lead agent prepare work before members start. When `staged: true` is set, the lead executes first, then members fan out in parallel on the prepared material, and finally the lead wakes to synthesize results.
+
+This pattern applies whenever the lead needs to transform input before members can act on it -- transcribing audio, gathering sources, triaging an incident, or framing a problem for domain experts.
+
+**Configuration:**
+
+```yaml
+teams:
+  expert-panel:
+    lead: pm-coordinator
+    members:
+      - tech-lead
+      - ux-advocate
+      - biz-analyst
+    dispatch:
+      mode: council
+      staged: true
+      lead_timeout: 3600
+      member_timeout: 300
+```
+
+The `staged` flag is only valid with `mode: council`. Other mode combinations are rejected at schema validation.
+
+**Execution flow:**
+
+```mermaid
+sequenceDiagram
+    participant Chat as Chat Service
+    participant Lead as Lead Agent
+    participant Orch as Orchestrator
+    participant M1 as Member 1
+    participant M2 as Member 2
+
+    Chat->>Orch: Create lead (ready) + members (backlog)
+    Orch->>Lead: Dispatch lead
+    Lead-->>Orch: eve.status = "prepared"
+    Orch->>Orch: Promote backlog → ready
+    Orch->>M1: Dispatch member 1
+    Orch->>M2: Dispatch member 2
+    M1-->>Orch: eve.status = "success"
+    M2-->>Orch: eve.status = "success"
+    Orch->>Lead: Wake lead (children.all_done)
+    Lead-->>Orch: eve.status = "success"
+```
+
+The three phases of a staged council:
+
+1. **Prepare:** The chat service creates the lead job in `ready` phase and member jobs in `backlog` phase. The orchestrator claims and dispatches the lead. The lead processes input (e.g., transcribes audio, gathers context) and posts prepared content to the coordination thread via `eve-message` blocks. The lead returns `eve.status = "prepared"`.
+2. **Fan out:** The orchestrator promotes all `backlog` children to `ready` and requeues the lead with a `children.all_done` wake condition. Members run in parallel, each reading the coordination inbox for the lead's prepared content.
+3. **Synthesize:** When all members complete, the orchestrator wakes the lead. The lead reads member summaries from the coordination inbox and produces a final synthesis.
+
+**The `prepared` control signal:**
+
+```json
+{
+  "eve": {
+    "status": "prepared",
+    "summary": "Content prepared for expert review"
+  }
+}
+```
+
+`prepared` is distinct from `waiting` and `success`. It signals that the lead's preparation phase is complete and members should be promoted. After handling `prepared`, the orchestrator clears the `staged` flag on the lead so the synthesis phase uses normal completion logic.
+
+**Why `backlog` phase for members?**
+
+Member jobs are created in the existing `backlog` phase (not a new state). The orchestrator only claims `ready` jobs, so backlog members are visible but inert until promoted. This means `eve job list` shows the full team roster from dispatch time, and promotion is a single SQL update.
+
+**Edge cases:**
+
+- If the lead returns `success` without ever returning `prepared`, member jobs stay in `backlog` and are automatically cancelled.
+- If the lead fails or times out, backlog children are cancelled on parent completion.
+- If `staged: true` is set but the team has no members, the lead is requeued immediately after `prepared` without waiting for wake conditions.
+
 ## Coordination threads
 
 When a team dispatch creates child jobs, a coordination thread is automatically created and linked to the parent job. This thread enables inter-agent communication.

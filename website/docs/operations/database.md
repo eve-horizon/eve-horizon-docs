@@ -1,6 +1,6 @@
 ---
 title: Database Operations
-description: Provision managed databases, run migrations, execute SQL queries, and manage schemas with the Eve CLI.
+description: Provision managed databases, run migrations, execute SQL queries, manage snapshots, and restore from backups with the Eve CLI.
 sidebar_position: 3
 ---
 
@@ -327,35 +327,179 @@ eve db scale --env staging --class db.p2
 
 This changes the database tier for the specified environment. The operation may involve a brief maintenance window depending on the platform configuration.
 
-## Database reset and wipe
+## Database wipe
 
-Use these commands when you need to reinitialize a database:
-
-- `eve db reset`: drop + recreate + run migrations
-- `eve db wipe`: drop + recreate without running migrations
+Wipe drops and recreates the database without running migrations:
 
 ```bash
-eve db reset --env staging --force
 eve db wipe --env staging --force
 ```
+
+Both `reset` and `wipe` support direct URL mode for non-managed databases:
 
 ```bash
 eve db reset --url "postgres://app:app@localhost:5432/myapp" --force
 eve db wipe --url "postgres://app:app@localhost:5432/myapp" --force
 ```
 
-## Backup and restore
+## Snapshots and restore
 
-Managed databases are backed up by the platform according to the tier's backup policy. For manual backup operations, use the SQL access commands to export data:
+Eve provides per-tenant database snapshots backed by `pg_dump` and stored in S3. Snapshots give you point-in-time backups at the individual database level -- no need to touch the underlying RDS instance or affect other tenants.
 
-```bash
-# Export a table to check data before a migration
-eve db sql --env staging --sql "SELECT * FROM users" > users-backup.json
+```mermaid
+graph LR
+    A[Create Snapshot] --> B[pg_dump streams to S3]
+    B --> C[Snapshot Stored]
+    C --> D{Restore needed?}
+    D -->|Yes| E[pg_restore from S3]
+    D -->|No| F[Retained per policy]
+    F --> G[Pruner expires old snapshots]
 ```
 
-For full backup and restore procedures, coordinate with your platform administrator -- the managed database infrastructure handles automated backups at the platform level.
+### Creating a snapshot
 
-## Destroying a managed database
+```bash
+eve db snapshot --env production
+```
+
+This runs `pg_dump` against the environment's managed database and streams the output directly to S3. The snapshot uses the `custom` format with compression for efficient storage and fast restores.
+
+Override the default retention period for a one-off snapshot:
+
+```bash
+eve db snapshot --env production --retention 90d
+```
+
+### Listing and inspecting snapshots
+
+```bash
+# List all snapshots for an environment
+eve db snapshots --env production
+
+# Filter by status
+eve db snapshots --env production --status completed --limit 10
+
+# Show full details for a specific snapshot
+eve db snapshot show <snapshot_id>
+```
+
+### Restoring from a snapshot
+
+Restore overwrites the current database with the contents of a snapshot:
+
+```bash
+eve db restore --env staging --snapshot <snapshot_id> --force
+```
+
+Before restoring, the platform automatically creates a safety snapshot of the current state (so you can roll back if the restore was a mistake). Skip this with `--skip-safety-snapshot` if you don't need it.
+
+Cross-environment restore is supported -- restore a production snapshot into staging for debugging:
+
+```bash
+eve db restore --env staging --snapshot <snapshot_id> --source-env production --force
+```
+
+:::warning
+Restore terminates all active connections to the target database. Coordinate with your team before restoring production environments.
+:::
+
+### Deleting a snapshot
+
+```bash
+eve db snapshot delete <snapshot_id> --force
+```
+
+### Backup schedule and status
+
+Check the current backup configuration and last snapshot time for an environment:
+
+```bash
+eve db backup-status --env production
+```
+
+This shows the schedule, retention policy, last and next snapshot times, and whether snapshot-on-delete is enabled.
+
+### Automatic snapshots
+
+Production-class databases (`db.p2` and `db.p3`) get automatic protection out of the box:
+
+| Tier | Default Schedule | Default Retention | Snapshot-on-Delete | Snapshot-on-Reset |
+|------|-----------------|-------------------|--------------------|--------------------|
+| `db.p1` | Off (opt-in) | 7 days | Off | Off |
+| `db.p2` | Daily at 02:00 UTC | 30 days | On | On |
+| `db.p3` | Daily at 02:00 UTC | 90 days | On | On |
+
+Configure backup settings in your manifest under the managed DB service:
+
+```yaml
+services:
+  db:
+    x-eve:
+      role: managed_db
+      managed:
+        class: db.p2
+        engine: postgres
+        engine_version: "16"
+        backup:
+          schedule: "0 2 * * *"        # Cron expression (daily at 02:00 UTC)
+          retention: 30d               # How long to keep snapshots
+          snapshot_on_delete: true      # Snapshot before eve db destroy
+          snapshot_on_reset: true       # Snapshot before eve db reset
+```
+
+Override per environment for tighter production schedules:
+
+```yaml
+environments:
+  production:
+    overrides:
+      services:
+        db:
+          x-eve:
+            managed:
+              backup:
+                schedule: "0 */6 * * *"   # Every 6 hours
+                retention: 90d
+```
+
+To explicitly disable automatic snapshots on a production-class tier:
+
+```yaml
+backup:
+  schedule: false
+  snapshot_on_delete: false
+```
+
+### Snapshot portability
+
+Snapshots are standard `pg_dump` custom-format files. You can download them and restore to any Postgres instance outside Eve:
+
+```bash
+# Download a snapshot
+eve db snapshot download <snapshot_id> --output ./backup.dump
+
+# Restore with standard pg_restore -- no Eve required
+pg_restore --clean --if-exists --no-owner --no-acl \
+  -d postgres://user:pass@host:5432/mydb ./backup.dump
+```
+
+## Database reset and destroy
+
+### Resetting a database
+
+Reset drops and recreates the database, then runs migrations:
+
+```bash
+eve db reset --env staging --force
+```
+
+On database tiers with snapshot-on-reset enabled (`db.p2+` by default), a safety snapshot is created before the reset. Skip it with `--skip-snapshot`:
+
+```bash
+eve db reset --env staging --force --skip-snapshot
+```
+
+### Destroying a managed database
 
 Remove a managed database tenant from an environment:
 
@@ -363,10 +507,14 @@ Remove a managed database tenant from an environment:
 eve db destroy --env staging --force
 ```
 
-The `--force` flag is required to confirm destruction. This permanently removes the database tenant and all its data for the specified environment.
+The `--force` flag is required to confirm destruction. On database tiers with snapshot-on-delete enabled (`db.p2+` by default), a safety snapshot is created before the destroy. Skip it with `--skip-snapshot`:
+
+```bash
+eve db destroy --env staging --force --skip-snapshot
+```
 
 :::danger
-Database destruction is irreversible. Ensure you have backups before running `eve db destroy`.
+Database destruction is irreversible. Without `--skip-snapshot`, a safety snapshot is created automatically on production-class tiers, but always verify your backup strategy before destroying a database.
 :::
 
 ## Admin APIs
@@ -387,6 +535,18 @@ Per-environment tenant endpoints:
 | `/projects/:id/envs/:env/db/managed/rotate` | POST | Rotate credentials |
 | `/projects/:id/envs/:env/db/managed/scale` | POST | Change tier |
 | `/projects/:id/envs/:env/db/managed` | DELETE | Destroy tenant |
+
+Snapshot and restore endpoints:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/projects/:id/envs/:env/db/snapshots` | POST | Create a snapshot |
+| `/projects/:id/envs/:env/db/snapshots` | GET | List snapshots |
+| `/projects/:id/envs/:env/db/snapshots/:sid` | GET | Show snapshot details |
+| `/projects/:id/envs/:env/db/snapshots/:sid` | DELETE | Delete a snapshot |
+| `/projects/:id/envs/:env/db/snapshots/:sid/download` | GET | Get signed download URL |
+| `/projects/:id/envs/:env/db/restore` | POST | Restore from a snapshot |
+| `/projects/:id/envs/:env/db/backup-status` | GET | Backup schedule and status |
 
 ## CLI reference
 
@@ -414,10 +574,22 @@ Most `eve db` commands accept `--url <postgres-url>` as an alternative to `--env
 | `eve db new <description> --path <dir>` | Create migration in custom local path |
 | `eve db rotate-credentials --env <name>` | Rotate database credentials |
 | `eve db reset --env <name> --force` | Drop/recreate and rerun migrations |
+| `eve db reset --env <name> --force --skip-snapshot` | Reset without creating a safety snapshot |
 | `eve db reset --url <postgres-url> --force` | Drop/recreate direct URL and rerun migrations |
 | `eve db wipe --env <name> --force` | Drop/recreate without migration replay |
 | `eve db wipe --url <postgres-url> --force` | Drop/recreate direct URL without migration replay |
 | `eve db scale --env <name> --class <tier>` | Change database tier |
+| `eve db snapshot --env <name>` | Create a point-in-time snapshot |
+| `eve db snapshot --env <name> --retention 90d` | Create snapshot with custom retention |
+| `eve db snapshot show <snapshot_id>` | Show snapshot details |
+| `eve db snapshot delete <snapshot_id> --force` | Delete a snapshot |
+| `eve db snapshot download <snapshot_id> --output <path>` | Download snapshot as a portable dump file |
+| `eve db snapshots --env <name>` | List all snapshots for an environment |
+| `eve db snapshots --env <name> --status completed` | List snapshots filtered by status |
+| `eve db restore --env <name> --snapshot <id> --force` | Restore database from a snapshot |
+| `eve db restore --env <name> --snapshot <id> --source-env <env> --force` | Cross-environment restore |
+| `eve db backup-status --env <name>` | Show backup schedule and status |
 | `eve db destroy --env <name> --force` | Remove database tenant |
+| `eve db destroy --env <name> --force --skip-snapshot` | Destroy without creating a safety snapshot |
 
 See [CLI Commands](/docs/reference/cli-commands) for the full command reference.

@@ -8,13 +8,13 @@ sidebar_position: 7
 
 Workflows are named, on-demand job templates defined in your manifest. They provide a stable entry point for recurring tasks -- nightly audits, incident remediation, data migrations -- that can be invoked by the CLI, the REST API, or event triggers without constructing a full job payload each time.
 
-Unlike [pipelines](/docs/reference/pipelines), which define multi-step DAGs that expand into job graphs, workflows map one-to-one with jobs. A workflow invocation creates a single job with the workflow's configuration baked into its hints.
+A workflow invocation compiles into a **job DAG**: one root container job plus one child job per step. Dependencies between steps are expressed via `depends_on` and wired through the job relation system, so the scheduler automatically respects ordering.
 
 ## Workflow vs pipeline
 
 | Concern | Workflow | Pipeline |
 |---------|----------|----------|
-| **Unit of execution** | Single job | DAG of steps (each step may create a job) |
+| **Unit of execution** | Job DAG (root + one child per step) | DAG of steps (each step may create a job) |
 | **Definition location** | `workflows:` in manifest | `pipelines:` in manifest |
 | **Invocation** | `eve workflow run <name>` or `POST /workflows/{name}/invoke` | `eve pipeline run <name>` or event trigger |
 | **Use case** | Named agent tasks, remediation, audits | Build/test/deploy sequences |
@@ -25,11 +25,11 @@ Choose workflows when you need a single agent task with a stable name and option
 
 ## Defining a workflow
 
-Workflows live under the `workflows:` key in `.eve/manifest.yaml`. Each workflow has a name (the YAML key) and an optional body that can include database access, steps, hints, and triggers.
+Workflows live under the `workflows:` key in `.eve/manifest.yaml`. Each workflow has a name (the YAML key) and a body that includes steps, and optionally `with_apis`, database access, hints, and triggers.
 
 ### Minimal workflow
 
-A workflow with just a prompt and no extra configuration:
+A workflow with a single step:
 
 ```yaml
 # .eve/manifest.yaml
@@ -37,9 +37,35 @@ workflows:
   nightly-audit:
     db_access: read_only
     steps:
-      - agent:
-          prompt: "Audit error logs and summarize anomalies"
+      - name: audit
+        agent:
+          name: auditor
 ```
+
+### Multi-step workflow with API access
+
+A workflow with multiple steps, dependency ordering, and app API access for all steps:
+
+```yaml
+workflows:
+  ingestion-pipeline:
+    with_apis:
+      - coordinator
+    steps:
+      - name: ingest
+        agent:
+          name: ingestion
+      - name: extract
+        depends_on: [ingest]
+        agent:
+          name: extraction
+      - name: review
+        depends_on: [extract]
+        agent:
+          name: reviewer
+```
+
+Each step references an agent by name from the project's agent registry. The `depends_on` field creates ordering constraints -- a step only runs after all its dependencies complete.
 
 ### Workflow with hints and triggers
 
@@ -58,8 +84,9 @@ workflows:
         action: [opened, synchronize]
         base_branch: main
     steps:
-      - agent:
-          prompt: "Diagnose and fix the failing CI pipeline"
+      - name: diagnose-and-fix
+        agent:
+          name: ci-fixer
 ```
 
 ### Workflow with database access
@@ -71,23 +98,35 @@ workflows:
   weekly-report:
     db_access: read_only
     steps:
-      - agent:
-          prompt: "Generate a weekly summary of deployment frequency and failure rate"
+      - name: generate-report
+        agent:
+          name: reporter
 
   cleanup-stale-data:
     db_access: read_write
     steps:
-      - agent:
-          prompt: "Archive records older than 90 days from the events table"
+      - name: archive
+        agent:
+          name: data-janitor
 ```
 
-### Workflow fields
+### Step fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique name within the workflow |
+| `agent` | Yes | Agent reference: `name` (required), optional `harness`, `harness_profile`, `toolchains` |
+| `depends_on` | No | List of step names that must complete before this step runs |
+| `with_apis` | No | Per-step API override (see [with_apis](#app-api-access-with_apis) below) |
+
+### Workflow-level fields
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `with_apis` | string[] | App APIs available to all steps. Individual steps can override this. See [with_apis](#app-api-access-with_apis). |
 | `db_access` | `read_only` \| `read_write` | Database access level granted to the executing agent. Merged into `hints.db_access` on invocation. |
-| `steps` | array | Workflow step definitions. Currently supports `agent` steps with a `prompt` field. |
-| `hints` | object | Key-value pairs merged into the job's `hints` at invocation time. Use this for gates, timeouts, and harness preferences. |
+| `steps` | array | Workflow step definitions (see step fields above). |
+| `hints` | object | Key-value pairs merged into the root job's `hints` at invocation time. Use this for gates, timeouts, and harness preferences. |
 | `trigger` | object | Event trigger configuration. When matched, the orchestrator creates a workflow job automatically. |
 
 The workflow name (the YAML key) must be unique within the project manifest. It becomes the stable identifier used in CLI commands, API calls, and trigger matching.
@@ -148,8 +187,9 @@ workflows:
         event: pull_request
         base_branch: main
     steps:
-      - agent:
-          prompt: "Review this pull request for security issues"
+      - name: review
+        agent:
+          name: security-reviewer
 ```
 
 ### System trigger
@@ -162,8 +202,9 @@ workflows:
         event: job.failed
         pipeline: deploy
     steps:
-      - agent:
-          prompt: "Investigate the failed deployment and suggest a fix"
+      - name: investigate
+        agent:
+          name: deploy-doctor
 ```
 
 ### Slack trigger
@@ -176,8 +217,9 @@ workflows:
         event: message
         channel: C123ABC
     steps:
-      - agent:
-          prompt: "Summarize relevant channel updates and classify action items"
+      - name: summarize
+        agent:
+          name: channel-watcher
 ```
 
 ### Manual trigger
@@ -188,8 +230,9 @@ workflows:
     trigger:
       manual: true
     steps:
-      - agent:
-          prompt: "Run a security audit of the latest changes"
+      - name: audit
+        agent:
+          name: security-auditor
 ```
 
 ### Trigger fields
@@ -208,21 +251,125 @@ Trigger configuration follows the same structure as [pipeline triggers](/docs/re
 
 When a trigger fires, the orchestrator creates a workflow job with the event payload available in the job context. The agent can use this payload to understand what triggered the workflow and act accordingly.
 
+## Job DAG expansion
+
+When a workflow is invoked, the API compiles it into a job tree:
+
+1. A **root container job** is created with workflow metadata in `hints`
+2. One **child job per step** is created as a child of the root
+3. `depends_on` references are wired as `blocks`-type job relations
+4. The scheduler moves child jobs to `ready` only when all blockers are `done`
+
+### Job tree
+
+For a three-step workflow, the resulting job tree looks like:
+
+```
+[*] proj-abc12345 [Workflow] ingestion-pipeline
+ |- [-] proj-abc12345.1 [ingestion-pipeline] ingest
+ |- [-] proj-abc12345.2 [ingestion-pipeline] extract
+ |- [-] proj-abc12345.3 [ingestion-pipeline] review
+```
+
+The invocation response includes a `step_jobs` array mapping step names to child job IDs:
+
+```json
+{
+  "job_id": "proj-abc12345",
+  "status": "active",
+  "step_jobs": [
+    { "job_id": "proj-abc12345.1", "step_name": "ingest" },
+    { "job_id": "proj-abc12345.2", "step_name": "extract", "depends_on": ["ingest"] },
+    { "job_id": "proj-abc12345.3", "step_name": "review", "depends_on": ["extract"] }
+  ]
+}
+```
+
+### Per-step resolution
+
+Each step resolves its own execution context independently:
+
+- **Agent**: resolved from the project's agent registry by name
+- **Harness**: step-level `harness` overrides the agent's default
+- **Harness profile**: step-level `harness_profile` overrides the agent's default
+- **Toolchains**: step-level `toolchains` overrides the agent's default
+
+### Validation
+
+`eve manifest validate` checks workflow graphs at sync time:
+
+| Check | Error |
+|-------|-------|
+| Duplicate step names | `Duplicate step name '{name}' in workflow '{workflow}'` |
+| Cyclic dependencies | `Cycle detected in workflow '{workflow}': {step_a} -> {step_b} -> ... -> {step_a}` |
+| Invalid `depends_on` references | `Step '{name}' depends on unknown step '{ref}' in workflow '{workflow}'` |
+
+## App API access (`with_apis`)
+
+Workflows can declare which app-published APIs their steps should have access to. The `with_apis` field names the APIs (as declared in `x-eve.api_spec` in the manifest), and the server validates each name, generates an instruction block, and appends it to the step's job description.
+
+### Workflow-level declaration
+
+When set at the workflow level, all steps inherit the API access:
+
+```yaml
+workflows:
+  triage:
+    with_apis:
+      - coordinator
+      - analytics
+    steps:
+      - name: classify
+        agent:
+          name: classifier
+      - name: assign
+        depends_on: [classify]
+        agent:
+          name: assigner
+```
+
+### Per-step overrides
+
+Individual steps can override the workflow-level `with_apis`. A step with its own `with_apis` uses that list instead of inheriting from the workflow:
+
+```yaml
+workflows:
+  data-pipeline:
+    with_apis:
+      - coordinator
+    steps:
+      - name: ingest
+        agent:
+          name: ingestion
+      - name: analyze
+        depends_on: [ingest]
+        with_apis:
+          - coordinator
+          - analytics
+        agent:
+          name: analyst
+```
+
+In this example, the `ingest` step sees only the `coordinator` API (inherited from the workflow level), while the `analyze` step sees both `coordinator` and `analytics` (its own override).
+
+`with_apis` works the same way regardless of how the workflow is invoked -- CLI, REST API, or event trigger. It is a server-side primitive; the CLI `--with-apis` flag on `eve job create` is a thin wrapper around the same mechanism.
+
 ## Invocation modes
 
 Workflows support three invocation modes: CLI, REST API, and event triggers. All three create a standard job with workflow metadata in its hints.
 
 ### How invocation works
 
-When a workflow is invoked, the platform creates a job with the following metadata:
+When a workflow is invoked, the platform creates a root container job and one child job per step (see [Job DAG expansion](#job-dag-expansion) above). The root job carries the following metadata:
 
 - `labels`: `workflow:{name}` for filtering and identification
 - `hints.workflow_name`: the workflow name
 - `hints.request_json`: JSON-encoded input (if provided)
 - `hints.db_access`: from the workflow definition (if set)
+- `hints.app_apis`: from the workflow's `with_apis` field (if set)
 - Additional hints merged from the workflow's `hints` block
 
-The job then follows the standard lifecycle: `ready` -> `active` -> `done` (or `review`).
+Each child job follows the standard lifecycle: `ready` -> `active` -> `done` (or `review`). The root job transitions to `done` when all child jobs complete.
 
 ### CLI invocation
 
@@ -371,25 +518,27 @@ There is no schema validation on inputs today. The agent receives the raw JSON a
 
 ## Execution model
 
-Workflow execution follows the standard job lifecycle:
+Workflow execution follows the job DAG lifecycle:
 
 ```mermaid
 graph LR
-  A[Invoke] --> B[Job Created]
-  B --> C[ready]
-  C --> D[active]
-  D --> E[done]
-  D --> F[review]
-  F --> E
+  A[Invoke] --> B[Root Job]
+  B --> C[Child Jobs]
+  C --> D[ready]
+  D --> E[active]
+  E --> F[done]
+  E --> G[review]
+  G --> F
 ```
 
-1. **Invoke** -- CLI, API, or event trigger creates the job
-2. **Job created** -- Job enters `ready` phase with workflow metadata in hints
-3. **Gate check** -- If `hints.gates` are present, gates must be acquired before the job moves to `active`
-4. **Execution** -- The orchestrator assigns the job to a worker. The worker spawns the configured harness with the workflow prompt.
-5. **Completion** -- Job transitions to `done` (or `review` if configured). Result data is stored in `result_json`.
+1. **Invoke** -- CLI, API, or event trigger creates the job DAG
+2. **Root job** -- A container job is created with workflow metadata in hints
+3. **Child jobs** -- One child job per step, with `depends_on` wired as job relations
+4. **Gate check** -- If `hints.gates` are present, gates must be acquired before child jobs move to `active`
+5. **Execution** -- The scheduler moves each child job to `ready` once its blockers complete. The worker spawns the configured harness for each step's agent.
+6. **Completion** -- Each child job transitions to `done` (or `review` if configured). The root job transitions to `done` when all children complete.
 
-The workflow itself does not introduce additional lifecycle states. It is a job with extra metadata, not a separate execution primitive.
+The workflow itself does not introduce additional lifecycle states. It compiles to standard jobs with dependency relations.
 
 ### Result data
 
@@ -427,8 +576,9 @@ workflows:
   nightly-audit:
     db_access: read_only
     steps:
-      - agent:
-          prompt: "Query the last 24 hours of error logs. Summarize anomalies, group by service, and flag any recurring patterns. Write the report as result_json."
+      - name: audit
+        agent:
+          name: log-auditor
 ```
 
 ```bash
@@ -451,8 +601,9 @@ workflows:
         event: pull_request
         branch: main
     steps:
-      - agent:
-          prompt: "The CI pipeline has failed. Diagnose the root cause from the logs, implement a fix, and push a commit."
+      - name: diagnose-and-fix
+        agent:
+          name: ci-fixer
 ```
 
 ### Agent-to-agent communication

@@ -271,6 +271,170 @@ Agents can passively listen to channels and threads without requiring explicit m
 
 Each listener agent receives a separate job in its own project for every matching message.
 
+## Outbound delivery
+
+When an agent finishes a chat-originated job, the result is posted back to the originating thread automatically. The orchestrator detects job completion, resolves the chat origin from thread metadata, and pushes the result through the gateway.
+
+### Delivery flow
+
+```mermaid
+graph LR
+    Done["Job Done"] --> Orch["Orchestrator"]
+    Orch --> API["API<br/>resolve thread"]
+    API --> GW["Gateway"]
+    GW --> Provider["Provider<br/>sendMessage()"]
+```
+
+1. The orchestrator marks the job done and checks for a chat origin (`chat` label + `hints.thread_id`).
+2. The orchestrator calls `POST /internal/projects/{project_id}/chat/deliver` with the job ID, thread ID, and result text.
+3. The API resolves the delivery target from thread `metadata_json` (provider, account, channel, thread ID stored at inbound time).
+4. The API forwards to the gateway's internal delivery endpoint (`POST /gateway/internal/deliver`).
+5. The gateway calls `provider.sendMessage()` to deliver to the originating thread.
+
+Result text is taken from `result.resultText` when available, falling back to the `eve.summary` field from the agent's control signal. If both are absent, a generic "Job completed with no output" message is delivered.
+
+### Message truncation
+
+Slack enforces a 4000-character limit per message. If the result exceeds 3900 characters, the gateway truncates it and appends a pointer to the full result:
+
+```
+...[Truncated — full result: eve job result {job_id}]
+```
+
+### Delivery status tracking
+
+Each outbound message is recorded as a `thread_message` with `direction = 'outbound'` and a `delivery_status` field (`pending`, `delivered`, or `failed`). Delivery failures are logged with an error message but never block job completion -- the job is always marked done first.
+
+Inspect delivery history with the CLI:
+
+```bash
+eve thread messages <thread_id>
+```
+
+### Thread metadata
+
+Threads store provider-specific routing information in a `metadata_json` column, set when the thread is created from an inbound message:
+
+```json
+{
+  "provider": "slack",
+  "account_id": "T06ABCDEF",
+  "channel_id": "C0AKFH4HXNF",
+  "thread_id": "1773141918.681009"
+}
+```
+
+For threads created before this metadata existed, the delivery endpoint falls back to parsing the thread key (`account_id:channel_id:thread_id`).
+
+## Progress updates
+
+Agents can send real-time progress messages to the originating chat thread during execution. This bridges the gap between the initial "Job routed" acknowledgment and the final result, giving users visibility into long-running work.
+
+### How it works
+
+Agents emit `eve-message` fenced blocks in their output. The `EveMessageRelay` in the agent runtime detects these blocks and delivers them to the originating chat channel via the same delivery pipeline used for final results.
+
+````
+```eve-message
+Pulling metrics data from the warehouse...
+```
+````
+
+The relay has two delivery paths:
+
+| Path | Target | When |
+|------|--------|------|
+| **Coordination thread** | Internal thread for team dispatch | When the job has a parent (team member) |
+| **Chat channel** | Originating Slack/Nostr/WebChat thread | When the job has the `chat` label and a `thread_id` hint |
+
+Both paths can fire for the same message (e.g., a team member's progress is visible to both the coordination thread and the user's Slack thread).
+
+### Rate limiting
+
+Progress messages are rate-limited to prevent channel spam and respect provider API limits:
+
+| Limit | Value | Rationale |
+|-------|-------|-----------|
+| Minimum interval | 30 seconds | Slack rate limits (1 msg/sec/channel) |
+| Max per job | 10 messages | Prevents runaway agents from flooding |
+| Max text length | 500 characters | Keeps progress concise |
+
+A 10-minute job produces at most ~10 progress updates. Messages that exceed the rate limit are silently dropped. Delivery failures are logged but never affect job execution.
+
+### Structured progress
+
+For agents that want to send structured data (for future rich formatting), the relay also accepts JSON with a `body` field:
+
+````
+```eve-message
+{"kind": "progress", "body": "Found 847 records, analyzing trends..."}
+```
+````
+
+If the content is valid JSON with a `body` field, the relay extracts the body as display text. Otherwise, the raw content is used.
+
+## File materialization
+
+When a user uploads files in a chat message (e.g., a PDF or image in Slack), the gateway downloads them and stages them into the agent's workspace. This bridges provider-specific file hosting into Eve's provider-agnostic file system.
+
+### Materialization flow
+
+```mermaid
+graph LR
+    Upload["Chat + File"] --> GW["Gateway<br/>resolveFiles()"]
+    GW --> S3["Eve Storage"]
+    S3 --> Worker["Worker<br/>stage workspace"]
+    Worker --> Agent["Agent reads<br/>.eve/attachments/"]
+```
+
+1. **Gateway downloads:** The provider's `resolveFiles()` hook downloads files using provider-specific auth (e.g., Slack bot token) and uploads them to Eve storage via presigned URLs. Provider URLs are replaced with `eve-storage://` references in the message metadata.
+2. **Worker stages:** During workspace provisioning, the worker detects `eve-storage://` URLs in `job.metadata.files`, downloads them via presigned URLs, and writes them to `.eve/attachments/` in the workspace.
+3. **Agent reads:** The agent reads `.eve/attachments/index.json` for the file manifest and accesses files at `.eve/attachments/{filename}`.
+
+### What the agent sees
+
+```json
+{
+  "files": [
+    {
+      "id": "F019ABC123",
+      "name": "product-spec-v2.pdf",
+      "path": ".eve/attachments/F019ABC123-product-spec-v2.pdf",
+      "mimetype": "application/pdf",
+      "size": 245760,
+      "source_provider": "slack"
+    }
+  ]
+}
+```
+
+### Provider interface
+
+Providers that support file uploads implement an optional `resolveFiles()` method on the `GatewayProvider` interface. The method receives the raw file metadata and a `FileResolveContext` with presigned URL helpers. Providers that don't support files omit the method entirely.
+
+The gateway calls `resolveFiles()` in the async phase after webhook acknowledgment, so file downloads never block the initial response to the chat platform.
+
+### File limits
+
+| Limit | Value |
+|-------|-------|
+| Max files per message | 10 |
+| Max file size | 50 MB |
+| Max total per message | 100 MB |
+| Filename length | 255 characters |
+
+Files exceeding limits are skipped with a warning. The original provider URL is preserved as fallback metadata.
+
+### Storage layout
+
+Files are stored in S3 keyed by org, provider account, channel, and message timestamp:
+
+```
+chat-attachments/{org_id}/{provider}:{account_id}/{channel_id}/{message_ts}/{filename}
+```
+
+This channel-scoped layout enables future features like channel file history (`eve chat files --channel <id>`) and channel-based cleanup.
+
 ## Message lifecycle
 
 Understanding the full message lifecycle helps when debugging routing issues or building custom integrations.
@@ -279,11 +443,14 @@ Understanding the full message lifecycle helps when debugging routing issues or 
 2. **Validation:** Provider verifies authenticity (Slack signature, Nostr Schnorr signature, WebChat JWT).
 3. **Integration resolution:** Provider identity maps to Eve org (`team_id` to `org_id` for Slack, pubkey for Nostr).
 4. **Normalization:** Provider-specific payload is converted to a standard inbound message format.
-5. **Agent resolution:** Slug extracted from message text. If recognized, routes to that agent. If not, routes to org default.
-6. **Thread creation:** Thread key computed from account, channel, and optional thread ID. Existing thread matched or new thread created.
-7. **Job creation:** Job created for the resolved agent in the agent's project. Thread and event recorded.
-8. **Execution:** Orchestrator claims the job and dispatches to a worker. Agent executes.
-9. **Outbound:** Agent's response is delivered back through the originating provider (Slack `chat.postMessage`, Nostr Kind 4/1 event, WebChat WebSocket message).
+5. **File materialization:** If the message includes file attachments, the provider downloads them and uploads to Eve storage. Provider URLs are replaced with `eve-storage://` references.
+6. **Agent resolution:** Slug extracted from message text. If recognized, routes to that agent. If not, routes to org default.
+7. **Thread creation:** Thread key computed from account, channel, and optional thread ID. Existing thread matched or new thread created. Provider metadata stored for outbound delivery.
+8. **Job creation:** Job created for the resolved agent in the agent's project. Thread and event recorded. File references carried in job metadata.
+9. **Workspace staging:** Worker downloads materialized files from Eve storage into `.eve/attachments/` and writes the index manifest.
+10. **Execution:** Orchestrator claims the job and dispatches to a worker. Agent executes, optionally emitting progress updates via `eve-message` blocks.
+11. **Progress delivery:** Progress updates are relayed to the originating chat thread in real time (rate-limited to 30-second intervals).
+12. **Result delivery:** On job completion, the orchestrator pushes the result to the API, which forwards to the gateway for delivery to the originating thread.
 
 The gateway logs each step, making it possible to trace why a message was routed to a particular agent or dropped.
 
@@ -378,6 +545,10 @@ POST /integrations/slack/events              # Legacy Slack endpoint
 
 GET  /internal/orgs/{org_id}/agents          # Agent directory (filtered by policy)
 POST /internal/orgs/{org_id}/chat/route      # Slug-based routing
+
+POST /internal/projects/{project_id}/chat/deliver  # Outbound result/progress delivery
+POST /gateway/internal/deliver               # Gateway delivery dispatch
+POST /internal/storage/chat-attachments/presign  # Presigned URL for file upload/download
 
 POST /chat/simulate                          # Simulate chat message
 POST /chat/listen                            # Subscribe agent to channel/thread

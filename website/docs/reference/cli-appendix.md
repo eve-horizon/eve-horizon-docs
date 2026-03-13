@@ -1671,6 +1671,90 @@ eve env delete old-env --force
 
 ---
 
+## eve endpoint {#eve-endpoint}
+
+Register, inspect, and diagnose private endpoints backed by Tailscale. Endpoints make internal services reachable from the Eve cluster over a Tailscale connection.
+
+```
+eve endpoint <subcommand> [options]
+```
+
+### eve endpoint add {#eve-endpoint-add}
+
+Register a new private endpoint.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--name <name>` | string | — | Endpoint name (required) |
+| `--tailscale-hostname <fqdn>` | string | — | Tailscale fully-qualified hostname (required) |
+| `--port <port>` | number | — | Port number 1-65535 (required) |
+| `--org <org_id>` | string | Profile default | Organization scope |
+| `--health-path <path>` | string | — | Health check path (use `none` to disable) |
+
+**Examples:**
+
+```bash
+eve endpoint add --name my-llm --tailscale-hostname my-host.ts.net --port 8080 --org org_xxx
+eve endpoint add --name gpu-api --tailscale-hostname gpu.ts.net --port 443 --health-path /healthz
+```
+
+On success the command prints the cluster URL and a suggested `eve secrets set` command for wiring it into your services.
+
+### eve endpoint list {#eve-endpoint-list}
+
+List private endpoints for an org.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <org_id>` | string | Profile default | Organization scope |
+
+**Examples:**
+
+```bash
+eve endpoint list --org org_xxx
+```
+
+### eve endpoint show {#eve-endpoint-show}
+
+Show details for a single endpoint.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--verbose` | boolean | `false` | Run and display a live health check |
+
+**Examples:**
+
+```bash
+eve endpoint show my-llm --org org_xxx
+eve endpoint show my-llm --org org_xxx --verbose
+```
+
+### eve endpoint remove {#eve-endpoint-remove}
+
+Remove a registered endpoint.
+
+```bash
+eve endpoint remove my-llm --org org_xxx
+```
+
+### eve endpoint health {#eve-endpoint-health}
+
+Run a health check against a registered endpoint.
+
+```bash
+eve endpoint health my-llm --org org_xxx
+```
+
+### eve endpoint diagnose {#eve-endpoint-diagnose}
+
+Run diagnostics on an endpoint (connectivity, DNS resolution, health probe).
+
+```bash
+eve endpoint diagnose my-llm --org org_xxx
+```
+
+---
+
 ## eve event {#eve-event}
 
 Emit and inspect events. Apps use this to participate in the Event Ecosystem.
@@ -2064,6 +2148,9 @@ Manage Slack integration setup (`connect` or `install-url`).
 | `--token <token>` | string | — | Slack access token (stored in `tokens_json`) |
 | `--tokens-json <json>` | string | — | Raw `tokens_json` payload |
 | `--status <status>` | string | `active` | Integration status |
+| `--ttl <duration>` | string | — | Expiry for install link (e.g., `24h`, `7d`, `3600`) |
+
+The `install-url` subcommand generates a shareable, time-limited install link. The recipient does not need an Eve login -- they click the link and approve the Slack app. Use `--ttl` to control how long the link stays valid.
 
 **Examples:**
 
@@ -2071,6 +2158,7 @@ Manage Slack integration setup (`connect` or `install-url`).
 eve integrations list --org org_xxx
 eve integrations slack connect --org org_xxx --team-id T123 --token xoxb-...
 eve integrations slack install-url --org org_xxx
+eve integrations slack install-url --org org_xxx --ttl 7d
 ```
 
 ### eve integrations test {#eve-integrations-test}
@@ -3270,6 +3358,43 @@ eve project members remove user_abc --project proj_xxx
 
 ---
 
+## eve providers {#eve-providers}
+
+List registered AI providers, inspect provider details, and discover available models.
+
+```
+eve providers <list|show|models> [options]
+```
+
+### eve providers list {#eve-providers-list}
+
+List all registered AI providers.
+
+```bash
+eve providers list
+eve providers list --json
+```
+
+### eve providers show {#eve-providers-show}
+
+Show details for a specific provider (base URL, auth configuration, harness mappings, discovery settings).
+
+```bash
+eve providers show anthropic
+eve providers show openai --json
+```
+
+### eve providers models {#eve-providers-models}
+
+Discover available models from a provider.
+
+```bash
+eve providers models anthropic
+eve providers models openai --json
+```
+
+---
+
 ## eve release {#eve-release}
 
 Manage and inspect releases.
@@ -3465,7 +3590,7 @@ eve secrets export --project proj_xxx --keys GITHUB_WEBHOOK_SECRET
 
 ## eve skills {#eve-skills}
 
-Install skills from pack definitions in `.eve/manifest.yaml` or from explicit sources.
+Install skills from pack definitions and additional sources.
 
 ```
 eve skills <subcommand> [source]
@@ -3473,15 +3598,16 @@ eve skills <subcommand> [source]
 
 ### eve skills install {#eve-skills-install}
 
-Install skills with this resolution order:
-1. If `.eve/manifest.yaml` includes `x-eve.packs`, install from those packs (validated against `.eve/packs.lock.yaml`).
-2. Otherwise, use an explicit source argument when provided.
-3. Otherwise, fall back to `skills.txt`.
+Install skills. When run without an explicit source, the command processes both pack-based and `skills.txt`-based skills:
+
+1. Install from `x-eve.packs` in `.eve/manifest.yaml` (validated against `.eve/packs.lock.yaml`).
+2. Install from `skills.txt` (handles additional sources such as external skillpacks and `private-skills/` that packs do not include).
+3. When an explicit source argument is provided, install directly from that source.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `[source]` | string | — | URL, GitHub repo (`owner/repo`), or local path |
-| `--skip-installed` | boolean | `false` | Skip skills that are already installed |
+| `--skip-installed` | boolean | `false` | Skip skills that are already installed (applies to `skills.txt` entries) |
 
 **Examples:**
 
@@ -3489,7 +3615,7 @@ Install skills with this resolution order:
 eve skills install https://github.com/org/skillpack
 eve skills install org/skillpack
 eve skills install ./local/skills
-eve skills install                    # install from x-eve.packs, or skills.txt fallback
+eve skills install                    # install from x-eve.packs + skills.txt
 eve skills install --skip-installed
 ```
 
@@ -3722,13 +3848,13 @@ eve thread show thr_xxx --org org_xxx
 
 ### eve thread messages {#eve-thread-messages}
 
-List messages in a coordination thread.
+List messages in a coordination thread. Each message displays a delivery status indicator when available (`delivered`, `pending`, or `failed` with error detail).
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--since <duration>` | string | — | Time window: `5m`, `1h`, `30s`, `2d`, or ISO timestamp |
 | `--limit <n>` | number | — | Max messages to return |
-| `--json` | boolean | `false` | Output as JSON |
+| `--json` | boolean | `false` | Output as JSON (includes `delivery_status`, `delivery_error`, `delivered_at` fields) |
 
 **Examples:**
 
@@ -3989,19 +4115,3 @@ Show logs for a workflow job.
 eve workflow logs job_abc123
 ```
 
-## eve teams {#eve-teams}
-
-Worker team management.
-
-```
-eve teams <subcommand> [options]
-```
-
-### eve teams list {#eve-teams-list}
-
-List worker teams.
-
-```bash
-eve teams list
-eve teams list --org org_xxx
-```

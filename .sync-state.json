@@ -1,8 +1,34 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "cea48e66692f2b5524a2d126377d6f39a6cbfe85",
-  "last_synced_at": "2026-03-06T11:33:30.698Z",
+  "last_synced_commit": "3ec8bdb9822ac68354f794e6fe90dad0e9b132b5",
+  "last_synced_at": "2026-03-13T20:15:00.000Z",
   "sync_log": [
+    {
+      "commit": "3ec8bdb9822ac68354f794e6fe90dad0e9b132b5",
+      "commit_short": "3ec8bdb",
+      "synced_at": "2026-03-13T20:15:00.000Z",
+      "type": "incremental",
+      "commits_synced": 65,
+      "docs_updated": [
+        "reference/cli-commands.md",
+        "reference/cli-appendix.md",
+        "guides/agents-and-teams.md",
+        "guides/chat.md",
+        "agent-integration/chat-gateway.md",
+        "agent-integration/orchestration.md",
+        "reference/harnesses-and-workers.md",
+        "guides/services-and-databases.md",
+        "operations/deployment.md",
+        "guides/storage.md",
+        "reference/workflows.md",
+        "agent-integration/agent-native-design.md"
+      ],
+      "unmapped_sources": [
+        "docs/system/openapi.json (modified, 7222 lines)",
+        "docs/system/openapi.yaml (modified, 2327 lines)"
+      ],
+      "summary": "Major sync: 14 shipped capabilities across 12 doc pages. Agent aliases, staged team dispatch, chat outbound delivery, progress updates, file materialization, private endpoints/Tailscale, worker toolchain-on-demand, invoke shared module, GCS storage, Slack install smoothing, workflow DAG/with_apis, and Eden gap closure. Removed eve models/ollama/teams CLI commands and inference abstractions."
+    },
     {
       "commit": "cea48e66692f2b5524a2d126377d6f39a6cbfe85",
       "commit_short": "cea48e6",

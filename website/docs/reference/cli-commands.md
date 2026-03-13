@@ -38,7 +38,9 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve org](/docs/reference/cli-appendix#eve-org) | Manage organizations -- list, create, update, delete, members, membership requests |
+| [eve org delete](/docs/reference/cli-appendix#eve-org) | Delete an organization (soft or hard) -- `eve org delete <org_id> [--hard] [--force]` |
 | [eve project](/docs/reference/cli-appendix#eve-project) | Manage projects -- ensure, sync manifest, status, members |
+| [eve project delete](/docs/reference/cli-appendix#eve-project) | Delete a project (soft or hard) -- `eve project delete <project_id> [--hard] [--force]` |
 | [eve manifest](/docs/reference/cli-appendix#eve-manifest) | Validate manifests for schema correctness and required secrets |
 | [eve profile](/docs/reference/cli-appendix#eve-profile) | Manage repo-local CLI profiles (API URL, org, project defaults) |
 
@@ -57,16 +59,24 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve job](/docs/reference/cli-appendix#eve-job) | Create, list, update, claim, follow, and review jobs |
 | [eve supervise](/docs/reference/cli-appendix#eve-supervise) | Long-poll for child job events (lead agent coordination) |
 | [eve harness](/docs/reference/cli-appendix#eve-harness) | Inspect available harnesses, variants, and auth status |
+| [eve providers](/docs/reference/cli-appendix#eve-providers) | List registered AI providers, show details, and discover available models |
 
 ### Deployment
 
 | Command | Description |
 |---------|-------------|
 | [eve env](/docs/reference/cli-appendix#eve-env) | Manage environments -- create, deploy, rollback, reset, diagnose, logs |
+| [eve env undeploy](/docs/reference/cli-appendix#eve-env) | Tear down K8s deployment but keep config -- `eve env undeploy <env> [--project=] [--force]` |
 | [eve build](/docs/reference/cli-appendix#eve-build) | Manage builds -- create specs, trigger runs, view logs and artifacts |
+| [eve build delete](/docs/reference/cli-appendix#eve-build) | Delete a build spec and its runs/artifacts -- `eve build delete <build_id>` |
+| [eve build prune](/docs/reference/cli-appendix#eve-build) | Prune old builds -- `eve build prune [--project=] [--keep=10]` |
 | [eve release](/docs/reference/cli-appendix#eve-release) | Resolve and inspect releases by tag |
+| [eve release delete](/docs/reference/cli-appendix#eve-release) | Delete a release -- `eve release delete <tag> [--project=]` |
+| [eve release prune](/docs/reference/cli-appendix#eve-release) | Prune old releases -- `eve release prune [--project=] [--keep=5]` |
 | [eve pipeline](/docs/reference/cli-appendix#eve-pipeline) | Run and inspect manifest-defined pipelines |
+| [eve pipeline delete](/docs/reference/cli-appendix#eve-pipeline) | Delete a pipeline -- `eve pipeline delete <name> [--project=]` |
 | [eve workflow](/docs/reference/cli-appendix#eve-workflow) | Inspect and invoke manifest-defined workflows |
+| [eve endpoint](/docs/reference/cli-appendix#eve-endpoint) | Register, inspect, and diagnose private Tailscale-connected endpoints |
 
 ### Events & Webhooks
 
@@ -81,11 +91,14 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve agents](/docs/reference/cli-appendix#eve-agents) | Inspect agent policy config, sync agents/teams/chat config, and apply pack-defined workflows |
+| [eve agents delete](/docs/reference/cli-appendix#eve-agents) | Delete an agent -- `eve agents delete <slug> [--project=]` |
+| [eve agents delete-team](/docs/reference/cli-appendix#eve-agents) | Delete a team -- `eve agents delete-team <team_id> [--project=]` |
 | [eve packs](/docs/reference/cli-appendix#eve-packs) | Manage AgentPack lockfile and resolution |
-| [eve skills](/docs/reference/cli-appendix#eve-skills) | Install skills from manifest-defined packs (`x-eve.packs`) or fall back to `skills.txt`/explicit sources |
+| [eve skills](/docs/reference/cli-appendix#eve-skills) | Install skills from manifest-defined packs (`x-eve.packs`) and `skills.txt` sources |
 | [eve chat](/docs/reference/cli-appendix#eve-chat) | Simulate chat messages for gateway testing |
 | [eve thread](/docs/reference/cli-appendix#eve-thread) | Manage org-scoped coordination threads for agent teams |
-| [eve integrations](/docs/reference/cli-appendix#eve-integrations) | Manage chat integrations (Slack) |
+| [eve thread delete](/docs/reference/cli-appendix#eve-thread) | Delete a thread -- `eve thread delete <thread_id>` |
+| [eve integrations](/docs/reference/cli-appendix#eve-integrations) | Manage chat integrations (Slack) -- shareable install links, hot-load settings |
 
 ### Auth & Secrets
 
@@ -116,12 +129,6 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 |---------|-------------|
 | [eve analytics](/docs/reference/cli-appendix#eve-analytics) | Org analytics -- job counts, pipeline success rates, environment health |
 | [eve system](/docs/reference/cli-appendix#eve-system) | System health, status, logs, pods, events, orchestrator settings (admin) |
-
-### Teams
-
-| Command | Description |
-|---------|-------------|
-| [eve teams](/docs/reference/cli-appendix#eve-teams) | Create and manage worker teams |
 
 ### Migration
 
