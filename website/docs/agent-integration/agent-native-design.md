@@ -229,6 +229,93 @@ workflows:
 
 Each child job in the workflow receives the appropriate API instruction block. See [Workflows Reference](/docs/reference/workflows#app-api-access-with_apis) for the full schema.
 
+### App CLIs
+
+The most effective way to reduce agent LLM waste when interacting with app APIs is to ship a domain-specific CLI. Instead of constructing URLs, formatting JSON payloads, and handling auth headers, agents run a single command:
+
+```bash
+# Without CLI (3-5 LLM calls, error-prone)
+curl -X POST "$EVE_APP_API_URL_API/projects/$PID/changesets" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $EVE_JOB_TOKEN" \
+  -d @/tmp/changeset.json
+
+# With CLI (1 call, self-documenting)
+eden changeset create --project $PID --file /tmp/changeset.json
+```
+
+#### Declaring a CLI
+
+Add `x-eve.cli` to your service in the manifest alongside `api_spec`:
+
+```yaml
+services:
+  api:
+    build:
+      context: ./apps/api
+    ports: [3000]
+    x-eve:
+      api_spec:
+        type: openapi
+      cli:
+        name: eden
+        bin: cli/bin/eden
+```
+
+When an agent job has `with_apis: [api]`, the platform provides both:
+- `EVE_APP_API_URL_API` — raw API URL (existing)
+- `eden` on PATH — CLI binary (new)
+
+The agent instruction block prioritizes the CLI:
+
+```
+- **api** (openapi): `http://api.svc:3000`
+  - CLI: `eden` (on PATH — run `eden --help` to see all commands)
+  - Fallback env var: `$EVE_APP_API_URL_API`
+```
+
+#### Building a CLI
+
+The recommended pattern uses Node.js + Commander.js + esbuild:
+
+1. **API client** (`cli/src/client.ts`): reads `EVE_APP_API_URL_{SERVICE}` and `EVE_JOB_TOKEN` from environment
+2. **Commands** (`cli/src/commands/*.ts`): domain-specific subcommands using Commander.js
+3. **Bundle** (`cli/build.mjs`): esbuild produces a single CJS file with zero runtime dependencies
+4. **Binary** (`cli/bin/eden`): committed to the repo (~50-200KB), available immediately after clone
+
+```bash
+# Build: single file, no node_modules needed at runtime
+node cli/build.mjs
+```
+
+Key conventions:
+- **Output**: human-readable by default, `--json` for machine parsing
+- **Errors**: stderr with exit code 1 and actionable messages
+- **Auto-detection**: when only one project exists, detect automatically instead of requiring `--project`
+- **Progressive help**: every command supports `--help`
+
+#### Distribution modes
+
+| Mode | Declaration | Latency | Use case |
+|------|-------------|---------|----------|
+| Repo-bundled | `bin: cli/bin/myapp` | Zero | Node.js, Python, scripts |
+| Image-based | `image: org/myapp-cli:latest` | 2-5s | Go, Rust, compiled binaries |
+
+Image-based CLIs use the same init container pattern as toolchains. Use `busybox:stable` as the final Docker stage (not `FROM scratch` — init containers need `sh` and `cp`).
+
+#### Environment variable contract
+
+Every app CLI reads these variables (injected by the platform):
+
+| Variable | Purpose |
+|----------|---------|
+| `EVE_APP_API_URL_{SERVICE}` | Base URL of the app API |
+| `EVE_JOB_TOKEN` | Bearer auth token (RS256 JWT) |
+| `EVE_PROJECT_ID` | Eve platform project ID |
+| `EVE_ORG_ID` | Eve platform org ID |
+
+The CLI never requires manual configuration. If the env vars are missing, print a clear error directing the user to add `with_apis` to their agent or workflow config.
+
 ### Verifying agent tokens
 
 When an agent calls your app's API, the request includes an `Authorization: Bearer` header with a job token. You have three options for verification.

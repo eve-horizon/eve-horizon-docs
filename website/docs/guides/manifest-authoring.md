@@ -170,6 +170,7 @@ Every service can include an `x-eve` block (also accepted as `x_eve`) for Eve-sp
 | `ingress` | Public routing: `{ public: true, port: 3000 }` |
 | `api_spec` | Single API spec registration |
 | `api_specs` | Multiple API specs (array) |
+| `cli` | App CLI declaration for agent access |
 | `external` | If `true`, the service is not deployed (external dependency) |
 | `url` | Connection string for external services |
 | `worker_type` | Worker pool type for worker-role services |
@@ -203,6 +204,34 @@ x-eve:
 ```
 
 The `spec_url` is relative to the service URL by default. When `on_deploy` is `true` (the default), Eve fetches the spec after each deployment.
+
+### CLI registration
+
+Register a domain-specific CLI so agents interact with your service via commands instead of raw REST calls:
+
+```yaml
+x-eve:
+  api_spec:
+    type: openapi
+  cli:
+    name: eden                  # binary name on $PATH
+    bin: cli/bin/eden            # path relative to repo root
+```
+
+The `cli` block sits alongside `api_spec` on the service's `x-eve` extension. When an agent job has `with_apis: [api]`, the platform provides both the raw API URL (`EVE_APP_API_URL_API`) and the CLI on PATH.
+
+| Field | Description |
+|-------|-------------|
+| `name` | CLI binary name (lowercase alphanumeric + hyphens, unique per project) |
+| `bin` | Path to executable relative to repo root (for repo-bundled CLIs) |
+| `image` | Docker image containing the CLI (for compiled Go/Rust CLIs) |
+| `description` | Optional description shown in agent instruction blocks |
+
+**Repo-bundled CLIs** (recommended for Node.js/Python): bundle the CLI into a single executable with esbuild or similar. Commit the binary to the repo. The platform runs `chmod +x` and adds it to PATH after clone — zero additional latency.
+
+**Image-based CLIs** (for compiled languages): provide a Docker image. The platform injects it via init container using the same pattern as toolchains.
+
+See [Agent-Native Design](/docs/agent-integration/agent-native-design#app-clis) for the full pattern including implementation, bundling, and testing.
 
 ### File mounts
 
@@ -547,6 +576,9 @@ services:
       api_spec:
         type: openapi
         spec_url: /openapi.json
+      cli:
+        name: acme
+        bin: cli/bin/acme
 
   web:
     build:

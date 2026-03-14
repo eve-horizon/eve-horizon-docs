@@ -53,6 +53,9 @@ services:
       api_spec:
         type: openapi
         spec_url: /openapi.json
+      cli:
+        name: myapp
+        bin: cli/bin/myapp
 
 environments:
   test:
@@ -144,6 +147,7 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 | `ingress.domain` | `string` | Override domain used for ingress hostname generation |
 | `api_spec` | `object` | Single API spec registration |
 | `api_specs` | `array<ApiSpec>` | Multiple API spec registrations |
+| `cli` | `object` | App CLI declaration (see [CLI Declaration](#cli-declaration) below) |
 | `external` | `boolean` | If `true`, service is not deployed (external dependency) |
 | `url` | `string` | Connection string for external services |
 | `worker_type` | `string` | Worker pool type for worker-role services |
@@ -173,6 +177,26 @@ x-eve:
 
 `spec_url` may be relative (resolved against the service URL) or absolute.
 `spec_path` is resolved against the container filesystem.
+
+### CLI Declaration
+
+```yaml
+x-eve:
+  cli:
+    name: myapp           # binary name on $PATH
+    bin: cli/bin/myapp     # path to executable (repo root-relative)
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | CLI binary name. Pattern: `^[a-z][a-z0-9-]*$`. Must be unique per project. |
+| `bin` | `string` | Conditional | Path relative to repo root. Required when `image` is not set. |
+| `image` | `string` | Conditional | Docker image for compiled CLIs. Required when `bin` is not set. |
+| `description` | `string` | No | Description shown in agent instruction blocks. |
+
+When `bin` is set, the platform makes the executable available after clone (repo-bundled mode). When `image` is set, the platform injects the CLI via init container (image-based mode, same pattern as toolchains).
+
+Agents with `with_apis` referencing a service that has `x-eve.cli` automatically receive both the CLI on PATH and the API URL in environment variables.
 
 ### File Mounts
 

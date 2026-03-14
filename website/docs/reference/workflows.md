@@ -308,6 +308,8 @@ Each step resolves its own execution context independently:
 
 Workflows can declare which app-published APIs their steps should have access to. The `with_apis` field names the APIs (as declared in `x-eve.api_spec` in the manifest), and the server validates each name, generates an instruction block, and appends it to the step's job description.
 
+When a service also declares `x-eve.cli` alongside `api_spec`, the platform makes the CLI binary available on the agent's `$PATH`. Agents receive a CLI-first instruction block that directs them to use the CLI (e.g., `eden --help`) rather than raw HTTP calls. The CLI reads `EVE_APP_API_URL_*` and `EVE_JOB_TOKEN` from the environment automatically — agents never construct URLs or auth headers manually. See [Agent-Native Design](/docs/agent-integration/agent-native-design#app-clis) for building app CLIs.
+
 ### Workflow-level declaration
 
 When set at the workflow level, all steps inherit the API access:
