@@ -157,7 +157,7 @@ Slack is the most common gateway provider. It uses the webhook transport model.
 ### Inbound flow
 
 1. Slack sends an event to the webhook endpoint.
-2. The provider validates the request signature using `HMAC-SHA256(signing_secret, v0:timestamp:body)` against the `X-Slack-Signature` header.
+2. The provider validates the request signature using `HMAC-SHA256(signing_secret, v0:timestamp:body)` against the `X-Slack-Signature` header. The signing secret is the org's Slack signing secret, configured via `eve integrations configure slack`.
 3. Duplicate delivery is checked via Slack `event_id` (retries are acknowledged and dropped).
 4. The integration mapping resolves `team_id` to `org_id`.
 5. Identity is resolved before agent routing.
@@ -173,6 +173,10 @@ For `app_mention` events, the first word after `@eve` is tested as an agent slug
 If identity cannot be resolved, the gateway returns a provider-specific linking message instead of a generic routing failure.
 
 ### Connecting a Slack workspace
+
+:::note Prerequisites
+Before connecting a Slack workspace, you must register your Slack app credentials with Eve. See the [Integrations guide](./integrations.md#slack) for setup instructions.
+:::
 
 The recommended way to connect a Slack workspace is with a **shareable install link**. An Eve admin generates the link, then sends it to anyone with Slack workspace admin access — no Eve credentials required on the recipient's side.
 

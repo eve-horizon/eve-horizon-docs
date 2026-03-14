@@ -405,7 +405,27 @@ eve store get          # Download a file from a bucket
 eve store url          # Get a presigned URL for an object
 ```
 
+## Cloud filesystem mounts
+
+Eve can mount external cloud storage providers (Google Drive, with more coming) into your workspace. Cloud FS mounts give agents and workflows direct access to files in your team's shared drives.
+
+Cloud FS is configured through the [Integrations guide](./integrations.md#google-drive). Key concepts:
+
+- **Mounts** link a cloud provider folder to an Eve project
+- **OAuth credentials** are per-org (each org registers their own OAuth app)
+- **Token refresh** is automatic — Eve handles access token renewal using the org's OAuth credentials
+- **RBAC** controls access: `cloud_fs:read`, `cloud_fs:write`, `cloud_fs:admin`
+
+```bash
+eve cloud-fs list --org <org_id>
+eve cloud-fs ls <mount_id> --org <org_id>
+eve cloud-fs search <mount_id> --query "report" --org <org_id>
+```
+
+For setup instructions, see the [Integrations guide](./integrations.md#google-drive).
+
 ## What's next?
 
 - Set up agents that use the org filesystem: [Agents & Teams](./agents-and-teams.md)
 - Define skills that read and write shared files: [Skills & Skill Packs](./skills.md)
+- Connect cloud drives and external services: [Integrations](./integrations.md)
