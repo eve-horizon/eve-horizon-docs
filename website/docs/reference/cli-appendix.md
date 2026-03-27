@@ -1429,6 +1429,84 @@ eve docs delete --org <org_id> --path <doc_path>
 
 ---
 
+## eve domain {#eve-domain}
+
+Manage custom domains for Eve-deployed apps. Domains are declared in the manifest under `x-eve.ingress.domains` and registered during `eve project sync`.
+
+```
+eve domain <subcommand> [options]
+```
+
+### eve domain list {#eve-domain-list}
+
+List custom domains for a project.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | `string` | context | Project ID |
+| `--json` | `boolean` | `false` | JSON output |
+
+```bash
+eve domain list --project proj_xxx
+# HOSTNAME                         SERVICE    STATUS             VERIFIED
+# limelee.com                      web        active             2026-03-28
+# www.limelee.com                  web        pending_dns        -
+```
+
+### eve domain verify {#eve-domain-verify}
+
+Check DNS resolution and show activation status. If DNS is verified, the domain transitions toward `active`.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | `string` | context | Project ID |
+
+```bash
+eve domain verify limelee.com --project proj_xxx
+# Domain: limelee.com
+# Status: active
+#   ✓ Domain is active and serving traffic
+#   URL: https://limelee.com
+```
+
+When DNS isn't ready, shows instructions:
+- **Apex domains** (e.g., `limelee.com`): add an A record to the platform ingress IP
+- **Subdomains** (e.g., `www.limelee.com`): add a CNAME to the platform ingress hostname
+
+### eve domain status {#eve-domain-status}
+
+Show detailed domain information.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | `string` | context | Project ID |
+
+```bash
+eve domain status limelee.com --project proj_xxx
+# Domain:      limelee.com
+# Status:      active
+# Service:     web
+# Environment: env_xxx
+# Ingress:     prod-web-cd-limelee-com
+# Verified:    2026-03-28T10:15:00.000Z
+```
+
+### eve domain remove {#eve-domain-remove}
+
+Remove a custom domain. The K8s Ingress is garbage-collected on next deploy.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | `string` | context | Project ID |
+| `--json` | `boolean` | `false` | JSON output |
+
+```bash
+eve domain remove www.limelee.com --project proj_xxx
+# ✓ Removed custom domain: www.limelee.com
+```
+
+---
+
 ## eve env {#eve-env}
 
 Manage environments for projects. Environments are deployment targets (staging, production, test).

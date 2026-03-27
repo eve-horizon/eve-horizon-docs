@@ -486,6 +486,40 @@ Eve automatically injects environment variables into all deployed services so th
 
 Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for client-side code running in the browser. Use `EVE_SSO_URL` when wiring app login flows with `@eve/auth` and `@eve/auth-react`. Services can override these values by defining them explicitly in their `environment` section.
 
+## Custom domains
+
+Bring your own domain for any deployed service. Declare domains in the manifest:
+
+```yaml
+services:
+  web:
+    x-eve:
+      ingress:
+        public: true
+        alias: myapp              # myapp.eh1.incept5.dev still works
+        domains:
+          - myapp.com
+          - www.myapp.com
+```
+
+After deploying, Eve registers the domains and tells you where to point your DNS:
+
+```bash
+eve env deploy proj_xxx prod --tag v1.0.0
+# Custom domain myapp.com: DNS not pointing to platform.
+# Point to ingress.eh1.incept5.dev and run: eve domain verify myapp.com
+```
+
+Point your DNS, then verify:
+
+```bash
+eve domain verify myapp.com
+# ✓ Domain is active and serving traffic
+# URL: https://myapp.com
+```
+
+Each custom domain gets its own TLS certificate via Let's Encrypt (HTTP-01 challenge). Manage domains with `eve domain list`, `eve domain status`, and `eve domain remove`. See the [CLI reference](/docs/reference/cli-appendix#eve-domain) and [manifest schema](/docs/reference/manifest-schema) for full details.
+
 ## What's next?
 
 Add agent skills to your project: [Skills & Skill Packs](./skills.md)

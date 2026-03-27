@@ -77,6 +77,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve pipeline delete](/docs/reference/cli-appendix#eve-pipeline) | Delete a pipeline -- `eve pipeline delete <name> [--project=]` |
 | [eve workflow](/docs/reference/cli-appendix#eve-workflow) | Inspect and invoke manifest-defined workflows |
 | [eve endpoint](/docs/reference/cli-appendix#eve-endpoint) | Register, inspect, and diagnose private Tailscale-connected endpoints |
+| [eve domain](/docs/reference/cli-appendix#eve-domain) | Manage custom domains for deployed apps -- list, verify DNS, check status, remove |
 
 ### Events & Webhooks
 

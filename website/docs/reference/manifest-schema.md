@@ -144,6 +144,7 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 | `ingress.public` | `boolean` | Enable public ingress (default: `true` when ports are exposed) |
 | `ingress.port` | `number` | Port to route traffic to |
 | `ingress.alias` | `string` | Custom subdomain alias (3-63 chars, lowercase alphanumeric + hyphens) |
+| `ingress.domains` | `string[]` | Custom domain names (e.g., `["myapp.com", "www.myapp.com"]`). Max 10 per service. Each gets its own Ingress + TLS cert via HTTP-01. |
 | `ingress.domain` | `string` | Override domain used for ingress hostname generation |
 | `api_spec` | `object` | Single API spec registration |
 | `api_specs` | `array<ApiSpec>` | Multiple API spec registrations |
