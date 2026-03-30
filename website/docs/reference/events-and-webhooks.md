@@ -92,11 +92,12 @@ Slack events are handled by the **Gateway** service, not the API. The gateway ve
 
 ### System events
 
-System events are emitted automatically by the orchestrator and other platform components. They are the foundation for self-healing automation.
+System events are emitted automatically by the orchestrator and other platform components. `job.failed` and `pipeline.failed` drive self-healing automation. `job.attempt.completed` fires on every attempt completion (success or failure) and is the primary trigger for post-session workflows like the [learning loop](https://github.com/eve-horizon/learning-loop-agentpack).
 
 | Type | Trigger | Payload |
 |------|---------|---------|
 | `system.job.failed` | Job execution failure | `{ job_id, attempt_id, error_message, error_code, exit_code, mutation_id, request_id, metadata }` |
+| `system.job.attempt.completed` | Job attempt finished (success or failure) | `{ job_id, attempt_id, assignee, thread_id, execution_type, status, duration_ms }` |
 | `system.pipeline.failed` | Pipeline run failure | `{ run_id, pipeline_name, error_message, error_code, exit_code, mutation_id, request_id, metadata }` |
 | `system.doc.created` | Org document created | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash, mutation_id, request_id, metadata }` |
 | `system.doc.updated` | Org document updated | `{ org_id, project_id, doc_id, doc_version_id, path, version, content_hash, mutation_id, request_id, metadata }` |

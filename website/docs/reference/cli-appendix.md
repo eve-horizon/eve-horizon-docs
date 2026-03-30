@@ -2891,6 +2891,8 @@ Manage canonical agent memory namespaces backed by org docs.
 eve memory <set|get|list|delete|search> [options]
 ```
 
+**Standard categories:** `learnings`, `decisions`, `conventions`, `context`, `runbooks`, `user`. The `user` category stores user-specific preferences and interaction history for personalized agent behavior.
+
 ### eve memory set {#eve-memory-set}
 
 Create or update a memory entry.
