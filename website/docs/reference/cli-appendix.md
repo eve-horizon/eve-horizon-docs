@@ -1352,7 +1352,7 @@ eve docs show --org <org_id> --path <doc_path> [--verbose]
 List documents by path prefix.
 
 ```
-eve docs list --org <org_id> [--path <prefix>]
+eve docs list --org <org_id> [--path <prefix>] [--tree] [--json]
 ```
 
 ### eve docs search {#eve-docs-search}
@@ -1360,7 +1360,7 @@ eve docs list --org <org_id> [--path <prefix>]
 Full-text search documents.
 
 ```
-eve docs search --org <org_id> --query <text> [--limit <n>] [--mode text|semantic|hybrid]
+eve docs search --org <org_id> --query <text> [--limit <n>] [--mode text|semantic|hybrid] [--path <prefix>] [--context <n>]
 ```
 
 ### eve docs stale {#eve-docs-stale}
@@ -1425,6 +1425,135 @@ Delete a document.
 
 ```
 eve docs delete --org <org_id> --path <doc_path>
+```
+
+### eve docs patch {#eve-docs-patch}
+
+Surgical document edits using search/replace operations.
+
+```
+eve docs patch --org <org_id> --path <doc_path> --replace "search" "replacement"
+eve docs patch --org <org_id> --path <doc_path> --append "content"
+eve docs patch --org <org_id> --path <doc_path> --insert-after "anchor" "content"
+eve docs patch --org <org_id> --path <doc_path> --operations '<json>'
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--replace <search> <replace>` | string | — | Search and replace text |
+| `--append <content>` | string | — | Append content to end of document |
+| `--insert-after <anchor> <content>` | string | — | Insert content after anchor text |
+| `--operations <json>` | string | — | Raw JSON array of patch operations |
+
+Simple flags and `--operations` are mutually exclusive. Returns the updated document with `current_version` and `content_hash`.
+
+**Examples:**
+
+```bash
+eve docs patch --org org_xxx --path /wiki/state.yaml --replace "health: green" "health: amber"
+eve docs patch --org org_xxx --path /wiki/state.yaml --insert-after "signals:" $'\n  - paging active'
+```
+
+### eve docs diff {#eve-docs-diff}
+
+Show changes between document versions.
+
+```
+eve docs diff --org <org_id> --path <doc_path> [--from <n>] [--to <n>] [--unified]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--from <n>` | number | latest-1 | Starting version number |
+| `--to <n>` | number | latest | Ending version number |
+| `--unified` | boolean | `false` | Force unified diff format |
+| `--json` | boolean | `false` | Machine-readable output |
+
+**Examples:**
+
+```bash
+eve docs diff --org org_xxx --path /wiki/state.yaml                    # Latest vs previous
+eve docs diff --org org_xxx --path /wiki/state.yaml --from 1 --to 5   # Specific range
+```
+
+### eve docs list --tree {#eve-docs-list-tree}
+
+Render document hierarchy as a tree.
+
+```
+eve docs list --org <org_id> [--path <prefix>] --tree [--json]
+```
+
+`--tree` renders a human-readable directory tree. `--tree --json` returns nested JSON nodes with `name`, `type` (directory/document), and `path` (for documents).
+
+**Examples:**
+
+```bash
+eve docs list --org org_xxx --path /wiki --tree
+# └── wiki/
+#     ├── operating-model/
+#     │   ├── mission.md
+#     │   └── outcomes/
+#     │       └── first-deploy.md
+#     └── world-model/
+#         └── state.yaml
+```
+
+### eve docs search (enhanced) {#eve-docs-search-enhanced}
+
+Search now supports path prefix filtering and context lines.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--path <prefix>` | string | — | Restrict results to path prefix |
+| `--context <n>` | number | — | Include N surrounding lines from each match |
+
+**Examples:**
+
+```bash
+eve docs search --org org_xxx --query "error rate" --path /world-model --context 3
+```
+
+### eve docs write-dir {#eve-docs-write-dir}
+
+Bulk write documents from a local directory.
+
+```
+eve docs write-dir --org <org_id> --source <dir> [--path-prefix <prefix>]
+```
+
+Maps each file in `--source` to a document path under `--path-prefix`. Hidden files (dotfiles) are skipped.
+
+### eve docs sync {#eve-docs-sync}
+
+Synchronize a local directory with org documents.
+
+```
+eve docs sync --org <org_id> --source <dir> --path-prefix <prefix> [--dry-run] [--delete]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--dry-run` | boolean | `false` | Report changes without mutating |
+| `--delete` | boolean | `false` | Remove remote docs not found locally |
+
+`--delete` is never the default — remote documents are only removed when explicitly requested. Always use `--dry-run` first.
+
+### eve docs watch {#eve-docs-watch}
+
+Stream document change events as NDJSON.
+
+```
+eve docs watch --org <org_id> [--path <prefix>] [--since now|5m|<iso>] [--project <id>]
+```
+
+Polls the events API for `system.doc.created`, `system.doc.updated`, and `system.doc.deleted` events. Filters by `--path` prefix. Outputs one JSON object per line.
+
+**Examples:**
+
+```bash
+eve docs watch --org org_xxx --path /world-model --since now
+# {"type":"system.doc.updated","path":"/world-model/state.yaml","version":42,"updated_at":"...","content_hash":"..."}
 ```
 
 ---

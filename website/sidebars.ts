@@ -32,6 +32,7 @@ const sidebars: SidebarsConfig = {
         'guides/storage',
         'guides/fullstack-app-design',
         'guides/agentic-app-design',
+        'guides/llm-wiki',
       ],
     },
     {
