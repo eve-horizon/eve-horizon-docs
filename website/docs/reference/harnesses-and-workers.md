@@ -453,6 +453,24 @@ Harness profiles are resolved for all job creation paths, including chat-routed 
 
 Profiles defined in agent packs are also resolved correctly. The agent sync process stores the resolved `x-eve` YAML alongside the agent config, and profile resolution checks the agent config first with a manifest fallback for backward compatibility.
 
+### Per-job and per-step overrides
+
+Jobs and workflow steps can override harness selection without changing the agent definition. Use this for one-off model experiments, replaying a failed step with a stronger profile, or passing environment overrides to a script/action step.
+
+```bash
+eve job create \
+  --project proj_xxx \
+  --description "Review the deploy failure" \
+  --harness codex \
+  --model gpt-5.5 \
+  --reasoning-effort high \
+  --env-override INCIDENT_ID=INC-123
+
+eve harness validate --project proj_xxx --workflow incident-review
+```
+
+Request-supplied harness or environment overrides require `jobs:harness_override`; secret-backed environment values also require `secrets:read`. Workflow step overrides are validated before execution and fail closed when the requested harness, profile, or env override is not allowed.
+
 ## Model selection
 
 ### Job-level model override

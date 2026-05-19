@@ -27,6 +27,7 @@ Key characteristics:
 - Provisioning occurs on first deploy for each environment
 - Each environment gets an isolated database tenant
 - Credentials are managed by the platform and available via interpolation
+- Tenant connection URLs trust the platform-managed CA bundle; app code should not need `rejectUnauthorized: false`
 - Managed DB availability depends on platform configuration -- ask an admin if provisioning is disabled
 
 ## Provisioning via manifest
@@ -52,6 +53,28 @@ services:
 | `class` | Yes | Database tier -- `db.p1`, `db.p2`, or `db.p3` |
 | `engine` | Yes | Database engine (currently `postgres`) |
 | `engine_version` | No | Engine version (e.g., `"16"`) |
+| `extensions` | No | Postgres extensions to preload before app migrations |
+
+### Extensions and TLS trust
+
+Managed Postgres can preload approved extensions for a tenant:
+
+```yaml
+services:
+  db:
+    x-eve:
+      role: managed_db
+      managed:
+        class: db.p2
+        engine: postgres
+        extensions:
+          - pgcrypto
+          - vector
+```
+
+Eve gates extension names against the platform allowlist and applies them before app migrations run. Use this for extensions your schema requires at migration time.
+
+For TLS, Eve injects database connection settings that trust the managed database CA. Client libraries should use normal certificate validation. Avoid disabling verification in application code; if a tenant URL fails TLS validation, treat it as a platform configuration issue and inspect the managed DB status.
 
 ### Database tiers
 

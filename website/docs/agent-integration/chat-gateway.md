@@ -176,6 +176,12 @@ ws://gateway:4820/?token=<jwt>
 - Thread continuity across reconnections
 - Multi-tab support (same user, multiple connections)
 
+### API (polling transport)
+
+REST API clients can use `provider: api` for inbound chat and poll thread messages for replies. The gateway registers a no-op API provider so outbound delivery remains uniform: replies are persisted in `thread_messages`, the provider returns successfully, and no push channel is required.
+
+Use this for embedded web apps, mobile clients, or server-side integrations that already own their polling/subscription loop. If a future API push channel is added, it can fill in the provider without changing chat routing semantics.
+
 ## Routing engine
 
 The routing engine determines which agent or team handles an inbound message. Two routing paths exist: direct slug routing and `chat.yaml` rule matching.

@@ -151,6 +151,8 @@ Every deployed service automatically receives a set of environment variables fro
 | `EVE_PROJECT_ID` | The project ID | `proj_01abc123...` |
 | `EVE_ORG_ID` | The organization ID | `org_01xyz789...` |
 | `EVE_ENV_NAME` | The environment name | `staging`, `production` |
+| `EVE_SERVICE_TOKEN` | Scoped service JWT for Eve API calls | `eyJ...` |
+| `EVE_APP_API_URL_<SERVICE>` | Internal URL for app APIs made available to jobs or linked apps | `http://staging-api:3000` |
 
 Use `EVE_API_URL` for backend/server-side calls from your container to the Eve API (internal cluster networking). Use `EVE_PUBLIC_API_URL` for browser/client-side calls or any code running outside the cluster. Use `EVE_SSO_URL` when integrating browser login with the shared auth SDKs.
 
@@ -168,47 +170,21 @@ Services can override these by defining them explicitly in their `environment` s
 
 Applications deployed on Eve can call the Eve REST API from their backend services -- creating jobs, triggering deploys, querying platform state, and more. This turns your application into an active participant in the Eve ecosystem rather than a passive deployment target.
 
-### Set up a service account
+### Use the injected service token
 
-Eve does not yet mint service-scoped tokens. The working approach is to create a dedicated user, mint a long-lived token, and store it as a project secret:
-
-```bash
-# 1. Create a dedicated app user
-eve admin invite --email app-bot@example.com --org org_xxx --role member
-
-# 2. Mint a 90-day token
-eve auth mint --email app-bot@example.com --org org_xxx --ttl 90
-
-# 3. Store tokens per environment
-eve secrets set EVE_API_TOKEN_STAGING <token> --project proj_xxx
-eve secrets set EVE_API_TOKEN_PROD <token> --project proj_xxx
-```
-
-:::warning
-These are user tokens with role-based permissions, not scoped service tokens. There is no environment restriction enforced at the API level today. Use per-environment secrets and inject each token only into its target environment.
-:::
-
-### Inject the token via the manifest
-
-Use environment overrides so each environment receives only its own token:
+Every deployed service receives an `EVE_SERVICE_TOKEN`: a 90-day JWT scoped to the service's org, project, environment, and service name. Eve refreshes it on every deploy. Declare any extra API permissions the service needs in the manifest:
 
 ```yaml
-environments:
-  staging:
-    overrides:
-      services:
-        api:
-          environment:
-            EVE_API_TOKEN: ${secret.EVE_API_TOKEN_STAGING}
-  production:
-    overrides:
-      services:
-        api:
-          environment:
-            EVE_API_TOKEN: ${secret.EVE_API_TOKEN_PROD}
+services:
+  api:
+    x-eve:
+      permissions:
+        - jobs:create
+        - jobs:read
+        - deployments:write
 ```
 
-The platform already injects `EVE_API_URL` and `EVE_PROJECT_ID`, so your service code only needs to read the token from the environment.
+Services get read-only defaults. If an Eve API call returns `403 Missing required permission`, add the specific permission to `x-eve.permissions` and redeploy.
 
 ### Make API calls
 
@@ -217,7 +193,7 @@ With the token injected, your service can call any Eve API endpoint. Here are co
 ```bash
 # Create a job from your backend
 curl -X POST "$EVE_API_URL/projects/$EVE_PROJECT_ID/jobs" \
-  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  -H "Authorization: Bearer $EVE_SERVICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Run a code change job from the app",
@@ -226,12 +202,12 @@ curl -X POST "$EVE_API_URL/projects/$EVE_PROJECT_ID/jobs" \
 
 # Follow job logs (SSE stream)
 curl -N \
-  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  -H "Authorization: Bearer $EVE_SERVICE_TOKEN" \
   "$EVE_API_URL/jobs/<job-id>/stream"
 
 # Trigger a deploy
 curl -X POST \
-  -H "Authorization: Bearer $EVE_API_TOKEN" \
+  -H "Authorization: Bearer $EVE_SERVICE_TOKEN" \
   -H "Content-Type: application/json" \
   "$EVE_API_URL/projects/$EVE_PROJECT_ID/envs/$EVE_ENV_NAME/deploy" \
   -d '{"ref":"main"}'
@@ -239,13 +215,21 @@ curl -X POST \
 
 Use `EVE_API_URL` for all server-side calls (internal cluster networking). Use `EVE_PUBLIC_API_URL` only for code running in the browser or outside the cluster.
 
+### Cross-project app links
+
+When one Eve app needs to consume another app's API or event stream, model it as an app link instead of exchanging static secrets. The producer exports an API or event feed, the consumer subscribes in its manifest, and Eve mints short-lived link tokens plus `EVE_APP_API_URL_<ALIAS>` environment variables for the selected services or jobs.
+
+Use the CLI to inspect and validate the link shape:
+
+```bash
+eve app-links plan --project proj_consumer --file .eve/manifest.yaml
+eve app-links list --project proj_consumer
+eve app-links explain --project proj_consumer --alias billing
+```
+
 ### Token rotation
 
-Tokens expire after the configured TTL (up to 90 days). To rotate:
-
-1. Re-mint with `eve auth mint --email app-bot@example.com --org org_xxx --ttl 90`
-2. Update the project secret with `eve secrets set`
-3. Redeploy the service to pick up the new value
+`EVE_SERVICE_TOKEN` is refreshed on deploy. Trigger a redeploy to rotate it immediately.
 
 ## Database design
 

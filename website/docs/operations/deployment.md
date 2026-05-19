@@ -57,6 +57,35 @@ Domain resolution follows a priority order:
 
 For local development, Eve uses `lvh.me` which resolves to `127.0.0.1` -- no `/etc/hosts` editing required.
 
+HTTP ingresses can be tuned per service with `x-eve.ingress.timeout` and `x-eve.ingress.max_body_size`. On nginx-backed clusters, Eve applies `proxy-read-timeout`, `proxy-send-timeout`, and body-size annotations to the default host, aliases, and custom domains. `eve env diagnose <project> <env> --json` includes `.http_ingress[]` rows showing requested and effective values plus controller support.
+
+Custom domains are owned by exactly one environment at a time. If two environments declare the same hostname, the first binding wins and later deploys skip that hostname with an `ingress_conflict` diagnostic. Use:
+
+```bash
+eve domain list --project proj_xxx
+eve domain transfer api.example.com --to staging --project proj_xxx
+eve domain unbind api.example.com --project proj_xxx
+```
+
+After transferring ownership, deploy the losing environment to remove the stale Ingress and deploy the winning environment to create the new one.
+
+### TCP ingress
+
+Services that declare `x-eve.tcp_ingress` get a public LoadBalancer service for raw TCP listeners in addition to their normal in-cluster ClusterIP service. This is for device protocols and other long-lived TCP sessions that cannot use HTTP ingress.
+
+`eve env diagnose <project> <env> --json` reports `.tcp_ingress[]` with each service, provider, listener, state, host, and port. Listener states are:
+
+| State | Meaning |
+|-------|---------|
+| `pending` | Manifest opts in but the TCP Service is absent |
+| `provisioning` | LoadBalancer exists but has no external hostname/IP yet |
+| `ready` | Host and port are ready to probe |
+
+```bash
+eve tcp-ingress test <project> <env> --listener a1-gt06
+eve tcp-ingress test <project> <env> --listener a1-gt06 --timeout 10 --json
+```
+
 ### TLS certificates
 
 App ingresses can be issued TLS certificates automatically via cert-manager:
@@ -183,6 +212,7 @@ Eve automatically injects these environment variables into every deployed servic
 | `EVE_PROJECT_ID` | Current project ID |
 | `EVE_ORG_ID` | Current organization ID |
 | `EVE_ENV_NAME` | Current environment name |
+| `EVE_SERVICE_TOKEN` | Scoped service JWT for Eve API calls, refreshed on deploy |
 
 Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for browser or client-side code. Use `EVE_SSO_URL` with `@eve/auth` and `@eve/auth-react` when adding app login.
 
@@ -381,6 +411,8 @@ eve env diagnose <project> <env>
 eve system health
 ```
 
+Diagnostics include deployment drift (`current_release_id` vs. last applied release), HTTP ingress tuning, TCP ingress readiness, custom-domain ownership, pod readiness, events, and recent deploy failure context.
+
 ### Environment logs
 
 Use `eve env logs` for service-level logs from an environment:
@@ -451,6 +483,9 @@ eve system logs worker
 | `service not provisioned` | Environment not created | `eve env create <env>` |
 | `image pull backoff` | Registry auth failed | Verify registry credentials; use `registry: "eve"` for managed apps |
 | `healthcheck timeout` | App not starting | Check app logs, verify ports in manifest |
+| `ingress_conflict` | Another environment owns a hostname | `eve domain list`, then `eve domain transfer` or `eve domain unbind` |
+| `readiness_timeout` | Pods deployed but readiness probes did not pass | `eve env diagnose`, then inspect pod and service logs |
+| `dependency_timeout` | A dependency service did not become healthy | `eve env logs <dependency>` and healthcheck settings |
 
 ## Workspace janitor
 

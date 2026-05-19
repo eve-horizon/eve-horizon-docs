@@ -168,6 +168,14 @@ Returns the latest known deploy and health snapshot per environment:
 
 Environment status values: `healthy`, `degraded`, or `unknown` (based on the latest health snapshot).
 
+Platform Sentinel continuously records environment health and can notify Slack when an environment degrades or recovers. It reads deploy state, namespace readiness, and recent failures, then writes health snapshots consumed by `eve analytics env-health`, `eve env diagnose`, and the dashboard.
+
+Slack notifications use project integrations. Operators can also send one-off notifications:
+
+```bash
+eve notifications send --project proj_xxx --channel '#ops' --message 'staging recovered'
+```
+
 ### Pipeline analytics
 
 Track pipeline performance and reliability:
@@ -248,6 +256,14 @@ Eve supports OpenTelemetry (OTEL) for integration with external observability pl
 
 OTEL is automatically enabled when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Traces include correlation IDs and job context, allowing you to link Eve operations to your existing observability stack.
 
+Query traces from the CLI when debugging request-level failures:
+
+```bash
+eve traces query --project proj_xxx --request-id req_abc
+eve traces query --project proj_xxx --service api --since 15m --error
+eve traces query --project proj_xxx --route /api/admin/ingest --p99
+```
+
 ## Real-time monitoring
 
 ### Job-level monitoring
@@ -290,6 +306,8 @@ eve system logs postgres
 | `eve analytics jobs --org <id> --window 7d` | Job analytics for time window |
 | `eve analytics pipelines --org <id>` | Pipeline performance metrics |
 | `eve analytics env-health --org <id>` | Environment health snapshot |
+| `eve traces query --project <id> --request-id <id>` | Query request traces |
+| `eve notifications send --project <id>` | Send a Slack notification |
 | `eve system health` | Platform health check |
 | `eve system logs <service>` | Platform service logs |
 | `eve admin balance show <org_id>` | View org balance |

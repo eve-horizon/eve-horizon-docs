@@ -100,6 +100,10 @@ services:
 
 The platform provisions the physical bucket and injects connection details as environment variables when you deploy. Your service code uses standard S3 SDKs to interact with the bucket.
 
+On AWS, app buckets can use per-app IRSA isolation. `isolation: auto` chooses IRSA when the cluster has OIDC configured and falls back to shared credentials on local/non-IRSA clusters. `isolation: irsa` requires IRSA and fails deploy if the platform cannot satisfy it. `eve env diagnose` reports the resolved isolation mode and IRSA metadata for each provisioned bucket.
+
+Removing a bucket declaration prunes Eve's `storage_buckets` row on the next deploy, but it does not delete the physical bucket.
+
 ```bash
 # List buckets for a project environment
 eve store buckets --project my-app --env staging
@@ -418,8 +422,9 @@ Cloud FS is configured through the [Integrations guide](./integrations.md#google
 
 ```bash
 eve cloud-fs list --org <org_id>
-eve cloud-fs ls <mount_id> --org <org_id>
-eve cloud-fs search <mount_id> --query "report" --org <org_id>
+eve cloud-fs mount --org <org_id> --provider google-drive --folder-id 0ABxxx --label "Shared Drive"
+eve cloud-fs ls /Reports --org <org_id> --mount cfm_xxx
+eve cloud-fs search "report" --org <org_id> --mount cfm_xxx
 ```
 
 For setup instructions, see the [Integrations guide](./integrations.md#google-drive).

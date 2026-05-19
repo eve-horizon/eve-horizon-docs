@@ -379,17 +379,14 @@ async function requireProjectAccess(req, res, next) {
 
 ### Service-to-Eve API access
 
-Backend services call the Eve API using long-lived user tokens stored as project secrets:
+Backend services call the Eve API with the injected `EVE_SERVICE_TOKEN`. The token is scoped to the service's org, project, environment, and service name, and refreshes on deploy.
 
 ```bash
-# Mint a token for the service account
-eve auth mint --email app-bot@example.com --org org_xxx --ttl 90
-
-# Store it as a project secret
-eve secrets set EVE_API_TOKEN <token> --project proj_xxx
+curl -H "Authorization: Bearer $EVE_SERVICE_TOKEN" \
+  "$EVE_API_URL/projects/$EVE_PROJECT_ID/jobs"
 ```
 
-The token is injected into the service environment via manifest configuration. Eve automatically provides `EVE_API_URL` (internal cluster URL for server-to-server calls), `EVE_PUBLIC_API_URL` (public URL for browser-facing code), `EVE_PROJECT_ID`, `EVE_ORG_ID`, and `EVE_ENV_NAME` in every service container.
+Declare extra scopes in `x-eve.permissions` when the service needs more than the read-only defaults. Eve also provides `EVE_API_URL` (internal cluster URL for server-to-server calls), `EVE_PUBLIC_API_URL` (public URL for browser-facing code), `EVE_PROJECT_ID`, `EVE_ORG_ID`, and `EVE_ENV_NAME` in every service container.
 
 ## Platform primitives
 

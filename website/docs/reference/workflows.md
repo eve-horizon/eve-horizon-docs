@@ -115,9 +115,14 @@ workflows:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Unique name within the workflow |
-| `agent` | Yes | Agent reference: `name` (required), optional `harness`, `harness_profile`, `toolchains` |
+| `agent` | One execution kind required | Agent reference: `name` (required), optional `harness`, `harness_profile`, `toolchains` |
+| `script` / `run` | One execution kind required | Worker-executed shell command. `run` is shorthand for `script.run`. |
+| `action` | One execution kind required | Built-in action such as `build`, `release`, `deploy`, `job`, `notify`, `env-ensure`, or `env-delete`. |
 | `depends_on` | No | List of step names that must complete before this step runs |
 | `with_apis` | No | Per-step API override (see [with_apis](#app-api-access-with_apis) below) |
+| `resource_refs` | No | Step resource policy: `inherit`, `none`, or a list of resource names/labels. |
+| `env_overrides` | No | Literal or secret-backed environment variables merged into this step job. |
+| `if` | No | Conditional expression evaluated against workflow inputs, event payload, and prior step results. |
 
 ### Workflow-level fields
 
@@ -125,6 +130,8 @@ workflows:
 |-------|------|-------------|
 | `with_apis` | string[] | App APIs available to all steps. Individual steps can override this. See [with_apis](#app-api-access-with_apis). |
 | `db_access` | `read_only` \| `read_write` | Database access level granted to the executing agent. Merged into `hints.db_access` on invocation. |
+| `resource_refs` | `inherit` \| `none` \| string[] | Default resource policy for steps. Step-level `resource_refs` overrides this. |
+| `env_overrides` | object | Default environment overrides applied to every executable step. |
 | `steps` | array | Workflow step definitions (see step fields above). |
 | `hints` | object | Key-value pairs merged into the root job's `hints` at invocation time. Use this for gates, timeouts, and harness preferences. |
 | `trigger` | object | Event trigger configuration. When matched, the orchestrator creates a workflow job automatically. |
@@ -290,9 +297,13 @@ The invocation response includes a `step_jobs` array mapping step names to child
 Each step resolves its own execution context independently:
 
 - **Agent**: resolved from the project's agent registry by name
+- **Script**: `script.run`, `script.command`, or top-level `run` becomes a worker-executed script job
+- **Action**: built-in actions become regular child jobs with action metadata
 - **Harness**: step-level `harness` overrides the agent's default
 - **Harness profile**: step-level `harness_profile` overrides the agent's default
 - **Toolchains**: step-level `toolchains` overrides the agent's default
+- **Resources**: invocation resources inherit by default, but workflow-level and step-level `resource_refs` can narrow or disable them
+- **Environment overrides**: invocation, workflow-level, and step-level `env_overrides` merge before the worker launches the step
 
 ### Validation
 
@@ -303,6 +314,8 @@ Each step resolves its own execution context independently:
 | Duplicate step names | `Duplicate step name '{name}' in workflow '{workflow}'` |
 | Cyclic dependencies | `Cycle detected in workflow '{workflow}': {step_a} -> {step_b} -> ... -> {step_a}` |
 | Invalid `depends_on` references | `Step '{name}' depends on unknown step '{ref}' in workflow '{workflow}'` |
+| Ambiguous execution kind | `Workflow step must define exactly one of action, script, agent, or run` |
+| Invalid env override | Reserved env var, lowercase key, non-secret expression, or merged payload over 4 KB |
 
 ## App API access (`with_apis`)
 
@@ -356,6 +369,36 @@ In this example, the `ingest` step sees only the `coordinator` API (inherited fr
 
 `with_apis` works the same way regardless of how the workflow is invoked -- CLI, REST API, or event trigger. It is a server-side primitive; the CLI `--with-apis` flag on `eve job create` is a thin wrapper around the same mechanism.
 
+## Step resources and environment overrides
+
+Workflow invocations can attach resources and environment overrides to the root job. By default, steps inherit invocation resources, but the workflow definition can narrow access:
+
+```yaml
+workflows:
+  publish-report:
+    resource_refs: inherit
+    env_overrides:
+      REPORT_BUCKET: ${secret.REPORT_BUCKET}
+    steps:
+      - name: draft
+        agent:
+          name: writer
+      - name: lint
+        depends_on: [draft]
+        resource_refs: none
+        run: pnpm lint:docs
+      - name: publish
+        depends_on: [lint]
+        resource_refs: [report-draft]
+        env_overrides:
+          PUBLISH_TOKEN: ${secret.PUBLISH_TOKEN}
+        run: ./scripts/publish-report.sh
+```
+
+Resolution order is invocation overrides, then workflow defaults, then step overrides. Request-supplied `env_overrides` require `jobs:harness_override`; secret references also require `secrets:read`. Event-triggered workflows use only the overrides already defined in the manifest.
+
+Use `resource_refs: none` for script or validation steps that should not receive user-provided files. Use explicit labels when a later step should see only selected resources.
+
 ## Invocation modes
 
 Workflows support three invocation modes: CLI, REST API, and event triggers. All three create a standard job with workflow metadata in its hints.
@@ -383,6 +426,9 @@ eve workflow run my-project nightly-audit
 
 # With input data
 eve workflow run my-project nightly-audit --input '{"severity": "error"}'
+
+# With privileged environment overrides
+eve workflow run my-project nightly-audit --env-override REPORT_BUCKET=staging-reports
 
 # Synchronous (waits for result, up to 60 seconds)
 eve workflow run my-project nightly-audit --wait --input '{"severity": "error"}'
@@ -684,6 +730,17 @@ Resolution order for configuration:
 
 Skill-driven workflows use standard job relations (`waits_for`, `blocks`) for multi-job coordination. A workflow skill returns `eve.status = "waiting"` when it is blocked on child jobs.
 
+## Retrying failed workflow steps
+
+For terminal workflow roots, retry only the failed portion instead of re-running the whole DAG:
+
+```bash
+eve workflow retry <root-job-id> --failed
+eve workflow retry <root-job-id> --from review
+```
+
+`--failed` replaces failed or cancelled step jobs and preserves successful predecessors. `--from <step>` retries from a named step and rewires downstream dependencies to the replacement attempts. The retry keeps the original materialized inputs, git controls, resource refs, and prior-step result wiring.
+
 ## CLI commands
 
 ### List workflows
@@ -725,3 +782,12 @@ eve workflow logs <job-id>
 ```
 
 Streams the execution logs for a workflow job. Equivalent to `eve job logs <job-id>`.
+
+### Retry a workflow
+
+```bash
+eve workflow retry <root-job-id> --failed
+eve workflow retry <root-job-id> --from <step-name>
+```
+
+Retries failed or selected portions of a completed workflow DAG.

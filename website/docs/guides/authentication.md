@@ -467,6 +467,59 @@ function App() {
 </EveLoginGate>
 ```
 
+### App-branded login and invites
+
+Deployed apps can opt into project-branded auth flows with `x-eve.auth` and `x-eve.branding` in the manifest:
+
+```yaml
+x-eve:
+  branding:
+    app_name: Field Ops
+    primary_color: "#2563eb"
+    support_email: support@example.com
+  auth:
+    login_method: magic_link
+    self_signup: false
+    invite_requires_password: false
+    org_access:
+      invite:
+        enabled: true
+        allowed_orgs: [org_customer]
+        invited_role: member
+```
+
+`login_method: magic_link` renders a passwordless SSO page for the app. `password_or_magic_link` keeps password login and adds app-scoped magic links. When `self_signup` is `false`, unknown emails receive a generic success response but Eve does not create a GoTrue user or send mail; create users through invites instead.
+
+Admins can send project-branded app invites:
+
+```bash
+eve org invite user@example.com --org org_customer --project proj_app --redirect-to https://app.example.com
+```
+
+Apps can also call `POST /auth/app-invites` or use `useEveAppAccess()` from `@eve-horizon/auth-react`. Eve verifies that the caller is an admin/owner in an allowed org, creates a regular member invite, sends the app-branded email, and carries the target org through the SSO callback.
+
+### Domain allowlist signup
+
+For apps where membership can be inferred from an email domain, enable domain signup rules:
+
+```yaml
+x-eve:
+  auth:
+    login_method: magic_link
+    self_signup: true
+    org_access:
+      domain_signup:
+        enabled: true
+        domains:
+          - domain: example.com
+            target_org: org_customer
+            role: member
+```
+
+On the first successful magic-link login, Eve creates a one-shot invite tagged as `domain_signup`, attaches the user to the matched target org, and emits `auth.domain_signup.invite_created` and `auth.domain_signup.member_attached` events. Explicit pending invites for the same email take precedence over domain signup.
+
+Eve wraps branded magic-link and invite action URLs behind an SSO confirmation interstitial so email-security scanners cannot consume one-time GoTrue links before the human clicks.
+
 ### Using auth state in components
 
 The `useEveAuth` hook gives you the current user and login/logout actions:
@@ -538,6 +591,7 @@ When you deploy an app to Eve, the platform automatically injects these environm
 | `EVE_ORG_ID` | Organization ID |
 | `EVE_PROJECT_ID` | Project ID |
 | `EVE_ENV_NAME` | Environment name |
+| `EVE_SERVICE_TOKEN` | Scoped service JWT for server-to-server Eve API calls |
 
 The `@eve-horizon/auth` middleware reads `EVE_API_URL`, `EVE_ORG_ID`, and `EVE_SSO_URL` automatically. You don't need to pass them as options unless you want to override the defaults (for example, in local development).
 

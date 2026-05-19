@@ -42,6 +42,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve project](/docs/reference/cli-appendix#eve-project) | Manage projects -- ensure, sync manifest, status, members |
 | [eve project delete](/docs/reference/cli-appendix#eve-project) | Delete a project (soft or hard) -- `eve project delete <project_id> [--hard] [--force]` |
 | [eve manifest](/docs/reference/cli-appendix#eve-manifest) | Validate manifests for schema correctness and required secrets |
+| [eve app-links](/docs/reference/cli-appendix#eve-app-links) | Inspect, plan, and explain cross-project app API/event links |
 | [eve profile](/docs/reference/cli-appendix#eve-profile) | Manage repo-local CLI profiles (API URL, org, project defaults) |
 
 ### Development
@@ -77,7 +78,8 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve pipeline delete](/docs/reference/cli-appendix#eve-pipeline) | Delete a pipeline -- `eve pipeline delete <name> [--project=]` |
 | [eve workflow](/docs/reference/cli-appendix#eve-workflow) | Inspect and invoke manifest-defined workflows |
 | [eve endpoint](/docs/reference/cli-appendix#eve-endpoint) | Register, inspect, and diagnose private Tailscale-connected endpoints |
-| [eve domain](/docs/reference/cli-appendix#eve-domain) | Manage custom domains for deployed apps -- list, verify DNS, check status, remove |
+| [eve domain](/docs/reference/cli-appendix#eve-domain) | Manage custom domains for deployed apps -- list, verify DNS, check status, transfer, unbind, remove |
+| [eve tcp-ingress](/docs/reference/cli-appendix#eve-tcp-ingress) | Probe public L4 TCP listeners declared with `x-eve.tcp_ingress` |
 
 ### Events & Webhooks
 
@@ -122,6 +124,7 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve kv](/docs/reference/cli-appendix#eve-kv) | Agent key-value state with optional TTL |
 | [eve search](/docs/reference/cli-appendix#eve-search) | Unified org search across memory, docs, threads, attachments, events |
 | [eve fs](/docs/reference/cli-appendix#eve-fs) | Manage org filesystem sync plus sharing and public-path publishing |
+| [eve cloud-fs](/docs/reference/cli-appendix#eve-cloud-fs) | Mount, browse, and search external cloud drives such as Google Drive |
 | [eve resources](/docs/reference/cli-appendix#eve-resources) | Resolve resource URIs into content snapshots |
 
 ### Observability
@@ -129,6 +132,8 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | Command | Description |
 |---------|-------------|
 | [eve analytics](/docs/reference/cli-appendix#eve-analytics) | Org analytics -- job counts, pipeline success rates, environment health |
+| [eve traces](/docs/reference/cli-appendix#eve-traces) | Query request traces by request ID, trace ID, service, route, or error state |
+| [eve notifications](/docs/reference/cli-appendix#eve-notifications) | Send project-scoped Slack notifications from operators or workflow actions |
 | [eve system](/docs/reference/cli-appendix#eve-system) | System health, status, logs, pods, events, orchestrator settings (admin) |
 
 ### Migration

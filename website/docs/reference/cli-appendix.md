@@ -1115,6 +1115,49 @@ When `--project` is set, the CLI uses the legacy project simulate endpoint. With
 
 ---
 
+## eve app-links {#eve-app-links}
+
+Inspect cross-project app links. App links let one Eve project consume another project's declared APIs or event stream through manifest-managed grants, subscriptions, injected tokens, and optional CLI images.
+
+```
+eve app-links <subcommand> [options]
+```
+
+### eve app-links list {#eve-app-links-list}
+
+List exports, subscriptions, and grants for a project.
+
+```bash
+eve app-links list --project proj_consumer
+eve app-links list proj_consumer --json
+```
+
+### eve app-links plan {#eve-app-links-plan}
+
+Dry-run the app-link declarations in a manifest before syncing.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project <id>` | string | context | Consumer project |
+| `--file <path>` | string | `.eve/manifest.yaml` | Manifest to evaluate |
+| `--env <name>` | string | — | Environment-specific plan |
+| `--json` | boolean | `false` | JSON output |
+
+```bash
+eve app-links plan --project proj_consumer --file .eve/manifest.yaml
+```
+
+### eve app-links explain {#eve-app-links-explain}
+
+Explain why a subscription is ready, missing, revoked, or invalid.
+
+```bash
+eve app-links explain --project proj_consumer --alias billing
+eve app-links explain --consumer proj_consumer --producer proj_api --api public
+```
+
+---
+
 ## eve db {#eve-db}
 
 Inspect and query environment databases with Eve auth + RLS.
@@ -1558,6 +1601,46 @@ eve docs watch --org org_xxx --path /world-model --since now
 
 ---
 
+## eve cloud-fs {#eve-cloud-fs}
+
+Mount, browse, and search external cloud file systems connected through Eve integrations. Google Drive is the first supported provider.
+
+```
+eve cloud-fs <list|mount|unmount|show|update|ls|search> [options]
+```
+
+| Subcommand | Purpose |
+|------------|---------|
+| `list` | List mounts for the current org, optionally filtered by project |
+| `mount` | Create a provider folder mount |
+| `unmount` / `remove` / `delete` | Remove a mount |
+| `show` | Show mount metadata and watch/index settings |
+| `update` | Change label, access mode, or auto-index behavior |
+| `ls` / `browse` | Browse files at a path |
+| `search` | Search files across mounted folders |
+
+Common flags:
+
+| Flag | Description |
+|------|-------------|
+| `--org <id>` | Organization scope |
+| `--project <id>` | Project scope for project-level mounts or filtering |
+| `--provider <name>` | Provider for new mounts, for example `google-drive` |
+| `--folder-id <id>` | Provider folder ID to mount |
+| `--label <text>` | Human-readable mount label |
+| `--mode <mode>` | `read_only`, `write_only`, or `read_write` |
+| `--auto-index <bool>` | Whether files should be indexed into org docs |
+| `--mount <id>` | Mount ID for browse/search |
+
+```bash
+eve cloud-fs list --org org_xxx
+eve cloud-fs mount --org org_xxx --provider google-drive --folder-id 0ABxxx --label "Shared Drive"
+eve cloud-fs ls /Reports --org org_xxx --mount cfm_xxx
+eve cloud-fs search "Q4 report" --org org_xxx
+```
+
+---
+
 ## eve domain {#eve-domain}
 
 Manage custom domains for Eve-deployed apps. Domains are declared in the manifest under `x-eve.ingress.domains` and registered during `eve project sync`.
@@ -1565,6 +1648,8 @@ Manage custom domains for Eve-deployed apps. Domains are declared in the manifes
 ```
 eve domain <subcommand> [options]
 ```
+
+Supported subcommands: `list`, `verify`, `status`, `transfer`, `unbind`, and `remove`.
 
 ### eve domain list {#eve-domain-list}
 
@@ -1618,6 +1703,33 @@ eve domain status limelee.com --project proj_xxx
 # Environment: env_xxx
 # Ingress:     prod-web-cd-limelee-com
 # Verified:    2026-03-28T10:15:00.000Z
+```
+
+### eve domain transfer {#eve-domain-transfer}
+
+Move a hostname binding to another environment in the same project. The database ownership changes immediately; deploy the losing and winning environments to reconcile Kubernetes Ingress resources.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--to <env>` | `string` | — | Target environment |
+| `--project` | `string` | context | Project ID |
+| `--json` | `boolean` | `false` | JSON output |
+
+```bash
+eve domain transfer api.example.com --to staging --project proj_xxx
+```
+
+### eve domain unbind {#eve-domain-unbind}
+
+Clear a hostname's environment binding without removing the domain record. The next deploy can claim it again according to the manifest.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--project` | `string` | context | Project ID |
+| `--json` | `boolean` | `false` | JSON output |
+
+```bash
+eve domain unbind api.example.com --project proj_xxx
 ```
 
 ### eve domain remove {#eve-domain-remove}
@@ -4251,6 +4363,82 @@ eve webhooks replay-status wh_xxx rpl_xxx --org org_xxx
 
 ---
 
+## eve traces {#eve-traces}
+
+Query request traces for a project. Use this when you have a request ID from logs, a trace ID from instrumentation, or you need recent error traces for a service or route.
+
+```
+eve traces query [--project <id>] [--service <name>] (--request-id <id>|--trace-id <id>|--since <duration>|--error|--route <route>) [--json]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--project <id>` | Project to query |
+| `--service <name>` | Optional service filter |
+| `--request-id <id>` | Find the trace associated with a request |
+| `--trace-id <id>` | Load a specific trace |
+| `--since <duration>` | Search recent traces, for example `15m` or `1h` |
+| `--route <route>` | Filter by route name/path |
+| `--error` | Return error traces |
+| `--p99` | Include latency percentile summary when available |
+| `--limit <n>` | Limit result count |
+| `--no-cache` | Bypass cached trace query results |
+
+```bash
+eve traces query --project proj_xxx --request-id req_abc
+eve traces query --project proj_xxx --service api --since 15m --error
+eve traces query --project proj_xxx --route /api/admin/ingest --p99
+```
+
+---
+
+## eve notifications {#eve-notifications}
+
+Send project-scoped notifications through a configured provider. Slack is the supported provider.
+
+```
+eve notifications send --project <project> --channel <channel> --message <text> [--integration-id <id>]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--project <id>` | Project scope |
+| `--channel <name-or-id>` | Slack channel |
+| `--message <text>` | Message body |
+| `--thread <id>` | Optional provider thread ID |
+| `--integration-id <id>` | Specific integration to use |
+| `--provider slack` | Provider, currently fixed to Slack |
+| `--json` | JSON output |
+
+```bash
+eve notifications send --project proj_xxx --channel '#ops' --message 'Deploy finished'
+```
+
+---
+
+## eve tcp-ingress {#eve-tcp-ingress}
+
+Probe public L4 TCP listeners declared with `x-eve.tcp_ingress`. The command resolves the listener from `eve env diagnose` and opens a TCP socket from the CLI host.
+
+```
+eve tcp-ingress test <project> <env> --listener <name> [--timeout <seconds>] [--json]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--project <id>` | Project ID, if not passed positionally or via profile |
+| `--env <name>` | Environment name, if not passed positionally |
+| `--listener <name>` | Listener name from the manifest |
+| `--timeout <seconds>` | Probe timeout, default `5` |
+| `--json` | JSON output |
+
+```bash
+eve tcp-ingress test proj_xxx staging --listener a1-gt06
+eve tcp-ingress test proj_xxx staging --listener a1-gt06 --timeout 10 --json
+```
+
+---
+
 ## eve workflow {#eve-workflow}
 
 Inspect and invoke workflows defined in the project manifest.
@@ -4290,12 +4478,14 @@ Invoke a workflow (fire-and-forget).
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--input <json>` | string | — | Input payload (JSON string) |
+| `--env-override KEY=VALUE` | repeatable | — | Privileged environment override for step jobs |
 | `--project <id>` | string | Profile default | Project ID |
 
 **Examples:**
 
 ```bash
 eve workflow run qa-review --input '{"task":"audit"}'
+eve workflow run qa-review --env-override INCIDENT_ID=INC-123
 eve workflow run proj_xxx release-notes --input '{"tag":"v1.2.3"}'
 ```
 
@@ -4306,6 +4496,7 @@ Invoke a workflow and wait for result.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--input <json>` | string | — | Input payload (JSON string) |
+| `--env-override KEY=VALUE` | repeatable | — | Privileged environment override for step jobs |
 | `--no-wait` | boolean | `false` | Return immediately without waiting |
 | `--project <id>` | string | Profile default | Project ID |
 
@@ -4324,3 +4515,16 @@ Show logs for a workflow job.
 eve workflow logs job_abc123
 ```
 
+### eve workflow retry {#eve-workflow-retry}
+
+Retry failed or selected portions of a terminal workflow DAG.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--failed` | boolean | `false` | Retry only failed/cancelled steps |
+| `--from <step>` | string | — | Retry from a named step and downstream dependents |
+
+```bash
+eve workflow retry <root-job-id> --failed
+eve workflow retry <root-job-id> --from publish
+```

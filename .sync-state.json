@@ -1,8 +1,63 @@
 {
   "eve_horizon_repo": "incept5/eve-horizon",
-  "last_synced_commit": "3ec8bdb9822ac68354f794e6fe90dad0e9b132b5",
-  "last_synced_at": "2026-03-13T20:15:00.000Z",
+  "last_synced_commit": "67105aed5207bda8abeeadb1090458012041f95f",
+  "last_synced_at": "2026-05-19T09:53:44.000Z",
   "sync_log": [
+    {
+      "commit": "67105aed5207bda8abeeadb1090458012041f95f",
+      "commit_short": "67105ae",
+      "synced_at": "2026-05-19T09:53:44.000Z",
+      "type": "incremental",
+      "commits_synced": 323,
+      "capabilities_synced": [
+        "App service Eve API auth",
+        "App-branded magic-link login and domain signup",
+        "App-initiated onboarding",
+        "Per-org OAuth credentials and Cloud FS mounts",
+        "Ingress tuning, custom domains, and TCP ingress",
+        "Workflow env overrides, script steps, resource refs, and retry",
+        "Event-triggered workflows and app-link events",
+        "Job observability, traces, notifications, and Platform Sentinel",
+        "Managed DB TLS trust and extensions",
+        "App object bucket IRSA isolation",
+        "LLM Wiki platform enhancements",
+        "API chat provider for polling clients",
+        "Cross-project app links"
+      ],
+      "docs_updated": [
+        "agent-integration/agent-native-design.md",
+        "agent-integration/chat-gateway.md",
+        "guides/agents-and-teams.md",
+        "guides/authentication.md",
+        "guides/chat.md",
+        "guides/fullstack-app-design.md",
+        "guides/integrations.md",
+        "guides/services-and-databases.md",
+        "guides/storage.md",
+        "operations/database.md",
+        "operations/deployment.md",
+        "operations/observability.md",
+        "operations/security.md",
+        "reference/cli-appendix.md",
+        "reference/cli-commands.md",
+        "reference/events-and-webhooks.md",
+        "reference/harnesses-and-workers.md",
+        "reference/job-api.md",
+        "reference/manifest-schema.md",
+        "reference/workflows.md"
+      ],
+      "removals": [],
+      "unmapped_sources": [
+        "docs/system/openapi.json (modified)",
+        "docs/system/openapi.yaml (modified)"
+      ],
+      "sync_map_gaps": [
+        "docs/plans/eve-dashboard-completion-plan.md has no docs page mapping",
+        "docs/plans/eve-dashboard-design.md has no docs page mapping"
+      ],
+      "summary": "Major sync: app auth/onboarding, service tokens, Cloud FS, app links, ingress/TCP networking, workflow runtime controls, observability/traces, database hardening, app buckets, LLM Wiki enhancements, and new CLI surfaces.",
+      "changelog_noted": true
+    },
     {
       "commit": "3ec8bdb9822ac68354f794e6fe90dad0e9b132b5",
       "commit_short": "3ec8bdb",

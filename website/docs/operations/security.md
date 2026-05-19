@@ -74,7 +74,9 @@ Eve uses RS256 JWT tokens as the primary authentication mechanism. When Supabase
 }
 ```
 
-**Service-account tokens** are RS256 JWTs with explicit scopes for application backends. They carry no implicit role expansion.
+**Service tokens** are RS256 JWTs injected into deployed app services as `EVE_SERVICE_TOKEN`. They are scoped to org, project, environment, and service name; expire after 90 days; and refresh on every deploy. Services get read-only defaults unless the manifest declares extra `x-eve.permissions`.
+
+**Service-account tokens** are RS256 JWTs with explicit scopes for non-deployed automation. They carry no implicit role expansion.
 
 ### JWKS endpoint
 
@@ -94,6 +96,8 @@ For app-facing authentication, Eve provides two shared packages:
 - `@eve-horizon/auth-react` for frontend session bootstrap and login UI
 
 When apps are deployed on Eve, `EVE_SSO_URL` is injected automatically alongside `EVE_API_URL` and `EVE_ORG_ID`, so apps can discover SSO endpoints without hostname guessing.
+
+App-branded magic-link and invite emails are wrapped behind an SSO confirmation interstitial. Security scanners can prefetch the wrapper URL without consuming the one-time GoTrue link; only the user's explicit confirmation redeems it. Wrap telemetry is emitted as auth events for investigation.
 
 ## SSH challenge-response
 

@@ -94,15 +94,15 @@ eve cloud-fs list --org <org_id>
 
 # Mount a drive folder
 eve cloud-fs mount --org <org_id> --project <proj_id> \
-  --provider google_drive \
-  --root-path "/" \
+  --provider google-drive \
+  --folder-id 0ABxxx \
   --label "Team shared drive"
 
 # Browse files
-eve cloud-fs ls <mount_id> --path "/" --org <org_id>
+eve cloud-fs ls / --mount cfm_xxx --org <org_id>
 
 # Search across mounted drives
-eve cloud-fs search <mount_id> --query "quarterly report" --org <org_id>
+eve cloud-fs search "quarterly report" --mount cfm_xxx --org <org_id>
 
 # Unmount
 eve cloud-fs unmount <mount_id> --org <org_id>
@@ -186,8 +186,8 @@ eve github setup
 | `eve integrations slack connect --org <org> ...` | Manual Slack connection |
 | `eve cloud-fs list --org <org>` | List Cloud FS mounts |
 | `eve cloud-fs mount --org <org> --project <proj> ...` | Mount a drive |
-| `eve cloud-fs ls <mount> --org <org>` | Browse files |
-| `eve cloud-fs search <mount> --query "..." --org <org>` | Search files |
+| `eve cloud-fs ls / --mount <mount> --org <org>` | Browse files |
+| `eve cloud-fs search "..." --mount <mount> --org <org>` | Search files |
 | `eve cloud-fs unmount <mount> --org <org>` | Remove mount |
 | `eve github setup` | GitHub webhook setup |
 

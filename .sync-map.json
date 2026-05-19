@@ -63,6 +63,98 @@
     "docs/plans/eden-platform-gap-closure-plan.md": {
       "pages": ["reference/workflows.md", "agent-integration/agent-native-design.md"],
       "scope": ["workflows", "agents", "platform"]
+    },
+    "docs/plans/api-chat-provider-plan.md": {
+      "pages": ["guides/chat.md", "agent-integration/chat-gateway.md"],
+      "scope": ["chat", "gateway"]
+    },
+    "docs/plans/app-ingress-tuning-plan.md": {
+      "pages": ["guides/services-and-databases.md", "operations/deployment.md", "reference/manifest-schema.md"],
+      "scope": ["deployment", "networking", "manifest"]
+    },
+    "docs/plans/app-initiated-user-onboarding-plan.md": {
+      "pages": ["guides/authentication.md", "operations/security.md"],
+      "scope": ["auth", "apps"]
+    },
+    "docs/plans/app-magic-link-domain-allowlist-plan.md": {
+      "pages": ["guides/authentication.md", "operations/security.md"],
+      "scope": ["auth", "apps"]
+    },
+    "docs/plans/app-magic-link-login-opt-in-plan.md": {
+      "pages": ["guides/authentication.md"],
+      "scope": ["auth", "apps"]
+    },
+    "docs/plans/app-service-eve-api-auth-plan.md": {
+      "pages": ["guides/fullstack-app-design.md", "reference/manifest-schema.md", "operations/security.md"],
+      "scope": ["auth", "apps", "manifest"]
+    },
+    "docs/plans/job-execution-observability.md": {
+      "pages": ["operations/observability.md", "operations/deployment.md", "reference/job-api.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["observability", "jobs", "cli"]
+    },
+    "docs/plans/job-execution-observability-v2.md": {
+      "pages": ["operations/observability.md", "operations/deployment.md", "reference/job-api.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["observability", "jobs", "cli"]
+    },
+    "docs/plans/job-token-path-and-mount-scope-plan.md": {
+      "pages": ["reference/job-api.md", "reference/harnesses-and-workers.md", "operations/security.md"],
+      "scope": ["jobs", "security", "runtime"]
+    },
+    "docs/plans/llm-wiki-platform-enhancements.md": {
+      "pages": ["guides/llm-wiki.md", "reference/cli-appendix.md"],
+      "scope": ["docs", "knowledge", "cli"]
+    },
+    "docs/plans/managed-db-tls-trust-plan.md": {
+      "pages": ["operations/database.md", "operations/security.md"],
+      "scope": ["database", "security"]
+    },
+    "docs/plans/per-org-oauth-credentials-plan.md": {
+      "pages": ["guides/integrations.md", "guides/authentication.md"],
+      "scope": ["integrations", "auth"]
+    },
+    "docs/plans/platform-sentinel-plan.md": {
+      "pages": ["operations/observability.md", "operations/deployment.md"],
+      "scope": ["observability", "deployment"]
+    },
+    "docs/plans/production-hardening-quick-wins-plan.md": {
+      "pages": ["operations/security.md", "operations/observability.md", "operations/deployment.md"],
+      "scope": ["security", "observability", "deployment"]
+    },
+    "docs/plans/workflow-env-overrides-plan.md": {
+      "pages": ["reference/workflows.md", "reference/manifest-schema.md", "reference/harnesses-and-workers.md"],
+      "scope": ["workflows", "runtime", "manifest"]
+    },
+    "docs/plans/cloud-fs-integration-plan.md": {
+      "pages": ["guides/storage.md", "guides/integrations.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["storage", "integrations", "cli"]
+    },
+    "docs/plans/custom-domains-plan.md": {
+      "pages": ["guides/services-and-databases.md", "operations/deployment.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["deployment", "networking", "cli"]
+    },
+    "docs/plans/public-tcp-ingress-plan.md": {
+      "pages": ["guides/services-and-databases.md", "operations/deployment.md", "reference/manifest-schema.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["deployment", "networking", "manifest", "cli"]
+    },
+    "docs/plans/cross-project-app-links-plan.md": {
+      "pages": ["guides/fullstack-app-design.md", "reference/events-and-webhooks.md", "reference/cli-commands.md", "reference/cli-appendix.md"],
+      "scope": ["apps", "events", "cli"]
+    },
+    "docs/plans/managed-postgres-extensions-plan.md": {
+      "pages": ["operations/database.md", "reference/manifest-schema.md"],
+      "scope": ["database", "manifest"]
+    },
+    "docs/plans/per-job-harness-override-plan.md": {
+      "pages": ["reference/workflows.md", "reference/harnesses-and-workers.md", "reference/job-api.md"],
+      "scope": ["jobs", "workflows", "runtime"]
+    },
+    "docs/plans/workflow-script-step-materialization-plan.md": {
+      "pages": ["reference/workflows.md", "reference/manifest-schema.md"],
+      "scope": ["workflows", "runtime", "manifest"]
+    },
+    "docs/plans/app-object-bucket-per-app-irsa-plan.md": {
+      "pages": ["guides/storage.md", "reference/manifest-schema.md"],
+      "scope": ["storage", "apps", "manifest"]
     }
   },
   "page_mappings": {
@@ -138,6 +230,14 @@
       "sources": ["docs/system/object-store-and-org-filesystem.md"],
       "description": "Object store, org filesystem, and storage access"
     },
+    "guides/integrations.md": {
+      "sources": ["docs/system/integrations.md", "docs/plans/per-org-oauth-credentials-plan.md", "docs/plans/cloud-fs-integration-plan.md"],
+      "description": "External integrations, OAuth provider credentials, Slack, and Cloud FS setup"
+    },
+    "guides/llm-wiki.md": {
+      "sources": ["docs/plans/llm-wiki-platform-enhancements.md", "docs/system/object-store-and-org-filesystem.md"],
+      "description": "LLM Wiki pattern and org docs/wiki operations"
+    },
     "reference/cli-commands.md": {
       "sources": ["packages/cli/src/commands/"],
       "description": "CLI command reference"
@@ -155,7 +255,7 @@
       "description": "Job API reference"
     },
     "reference/events-and-webhooks.md": {
-      "sources": ["docs/system/events.md", "docs/system/webhooks.md"],
+      "sources": ["docs/system/events.md", "docs/system/webhooks.md", "docs/system/cross-project-app-links.md"],
       "description": "Events and webhooks reference"
     },
     "reference/builds-and-releases.md": {

@@ -69,6 +69,45 @@ ports: [3000, 8080]      # Multiple ports
 
 When a service exposes ports and the environment has a domain configured, Eve creates ingress routing by default. Control this with the `x-eve.ingress` block.
 
+### HTTP ingress tuning
+
+App HTTP ingresses support portable tuning fields under `x-eve.ingress`:
+
+```yaml
+services:
+  api:
+    ports: [3000]
+    x-eve:
+      ingress:
+        public: true
+        port: 3000
+        timeout: 600s
+        max_body_size: 50m
+```
+
+`timeout` controls request/response timeout and `max_body_size` controls upload size. On nginx-backed clusters, Eve renders the native ingress annotations for the default host, alias, and custom domains. Other controllers keep routing unchanged; `eve env diagnose <project> <env> --json` reports `.http_ingress[]` with requested and effective values.
+
+Use these knobs for long-running HTTP requests and larger uploads. For batch work that can exceed 30 minutes, prefer an Eve job plus polling endpoint.
+
+### Public TCP listeners
+
+Use `x-eve.tcp_ingress` when a service needs public raw TCP, such as device protocols that cannot speak HTTP:
+
+```yaml
+services:
+  device-edge:
+    ports: [33400, 33500]
+    x-eve:
+      tcp_ingress:
+        listeners:
+          - name: a1-gt06
+            port: 33400
+          - name: mictrack-mt700
+            port: 33500
+```
+
+The deployer keeps the normal ClusterIP service for in-cluster traffic and creates a sibling public LoadBalancer service for the TCP listeners. `eve env diagnose` reports listener state, host, provider, and port; `eve tcp-ingress test <project> <env> --listener <name>` opens a TCP probe from your machine.
+
 ## Health checks
 
 Health checks tell Eve when a service is ready to receive traffic. They use the standard Docker Compose format:

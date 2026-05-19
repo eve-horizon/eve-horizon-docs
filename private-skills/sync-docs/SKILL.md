@@ -14,7 +14,8 @@ not just file diffs.
 
 ## Prerequisites
 
-- `GITHUB_TOKEN` env var (fine-grained PAT with `contents:read` on `incept5/eve-horizon`)
+- `GITHUB_TOKEN` env var (fine-grained PAT with `contents:read` on `incept5/eve-horizon`),
+  or repo-root `secrets.env` containing `GITHUB_TOKEN=...`
 - Node.js available in PATH (for `fetch()` API calls)
 - `.sync-state.json` and `.sync-map.json` in the repo root
 
@@ -24,10 +25,26 @@ The worker may not have `gh`, `curl`, or `jq`. Use Node.js `fetch()` for all
 GitHub API calls. Helper pattern:
 
 ```javascript
-// Use this pattern for ALL GitHub API calls in this skill
+// Use this pattern for ALL GitHub API calls in this skill.
+// It reads GITHUB_TOKEN from the environment first, then falls back to
+// repo-root secrets.env without printing the secret value.
 node -e "
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) { console.error('GITHUB_TOKEN not set'); process.exit(1); }
+  const fs = require('fs');
+  function loadGitHubToken() {
+    if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+    if (fs.existsSync('secrets.env')) {
+      const line = fs.readFileSync('secrets.env', 'utf8')
+        .split(/\\r?\\n/)
+        .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+      if (line) {
+        const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+        return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+      }
+    }
+    console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+    process.exit(1);
+  }
+  const token = loadGitHubToken();
   fetch('https://api.github.com/repos/incept5/eve-horizon/<endpoint>', {
     headers: {
       'Authorization': 'Bearer ' + token,
@@ -65,8 +82,22 @@ Verify GitHub API access using Node:
 
 ```bash
 node -e "
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) { console.error('GITHUB_TOKEN not set'); process.exit(1); }
+  const fs = require('fs');
+  function loadGitHubToken() {
+    if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+    if (fs.existsSync('secrets.env')) {
+      const line = fs.readFileSync('secrets.env', 'utf8')
+        .split(/\\r?\\n/)
+        .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+      if (line) {
+        const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+        return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+      }
+    }
+    console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+    process.exit(1);
+  }
+  const token = loadGitHubToken();
   fetch('https://api.github.com/repos/incept5/eve-horizon', {
     headers: {
       'Authorization': 'Bearer ' + token,
@@ -115,7 +146,22 @@ Make a single Compare API call:
 
 ```bash
 node -e "
-  const token = process.env.GITHUB_TOKEN;
+  const fs = require('fs');
+  function loadGitHubToken() {
+    if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+    if (fs.existsSync('secrets.env')) {
+      const line = fs.readFileSync('secrets.env', 'utf8')
+        .split(/\\r?\\n/)
+        .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+      if (line) {
+        const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+        return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+      }
+    }
+    console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+    process.exit(1);
+  }
+  const token = loadGitHubToken();
   const lastCommit = '<LAST_SYNCED_COMMIT>';
   fetch('https://api.github.com/repos/incept5/eve-horizon/compare/' + lastCommit + '...main', {
     headers: {
@@ -173,7 +219,22 @@ For each changed plan file, fetch the **first 20 lines only** via Contents API:
 
 ```bash
 node -e "
-  const token = process.env.GITHUB_TOKEN;
+  const fs = require('fs');
+  function loadGitHubToken() {
+    if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+    if (fs.existsSync('secrets.env')) {
+      const line = fs.readFileSync('secrets.env', 'utf8')
+        .split(/\\r?\\n/)
+        .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+      if (line) {
+        const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+        return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+      }
+    }
+    console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+    process.exit(1);
+  }
+  const token = loadGitHubToken();
   fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<plan_path>', {
     headers: {
       'Authorization': 'Bearer ' + token,
@@ -516,7 +577,8 @@ Rules:
 
 #### Source access
 
-All via GitHub API with `GITHUB_TOKEN`:
+All via GitHub API with `GITHUB_TOKEN`, loaded from the environment or repo-root
+`secrets.env`:
 - Contents API for full files (with base64 decode)
 - Raw media type for files > 1MB
 - Patches inline from Compare API response
@@ -524,7 +586,22 @@ All via GitHub API with `GITHUB_TOKEN`:
 ```bash
 # Full file via Contents API
 node -e "
-  const token = process.env.GITHUB_TOKEN;
+  const fs = require('fs');
+  function loadGitHubToken() {
+    if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+    if (fs.existsSync('secrets.env')) {
+      const line = fs.readFileSync('secrets.env', 'utf8')
+        .split(/\\r?\\n/)
+        .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+      if (line) {
+        const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+        return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+      }
+    }
+    console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+    process.exit(1);
+  }
+  const token = loadGitHubToken();
   fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<path>', {
     headers: {
       'Authorization': 'Bearer ' + token,
@@ -547,7 +624,22 @@ After all workers complete:
 1. Get the current eve-horizon main HEAD SHA:
    ```bash
    node -e "
-     const token = process.env.GITHUB_TOKEN;
+     const fs = require('fs');
+     function loadGitHubToken() {
+       if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+       if (fs.existsSync('secrets.env')) {
+         const line = fs.readFileSync('secrets.env', 'utf8')
+           .split(/\\r?\\n/)
+           .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+         if (line) {
+           const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+           return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+         }
+       }
+       console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+       process.exit(1);
+     }
+     const token = loadGitHubToken();
      fetch('https://api.github.com/repos/incept5/eve-horizon/commits/main', {
        headers: {
          'Authorization': 'Bearer ' + token,
@@ -661,7 +753,22 @@ the changes and pushing to main. The push triggers the existing deploy pipeline.
 - **Large file via Contents API**: Files over 1MB need the raw media type:
   ```bash
   node -e "
-    const token = process.env.GITHUB_TOKEN;
+    const fs = require('fs');
+    function loadGitHubToken() {
+      if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
+      if (fs.existsSync('secrets.env')) {
+        const line = fs.readFileSync('secrets.env', 'utf8')
+          .split(/\\r?\\n/)
+          .find(l => /^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=/.test(l));
+        if (line) {
+          const raw = line.replace(/^\\s*(?:export\\s+)?GITHUB_TOKEN\\s*=\\s*/, '').trim();
+          return raw.replace(/^['\\\"]|['\\\"]$/g, '');
+        }
+      }
+      console.error('GITHUB_TOKEN not set and secrets.env did not contain GITHUB_TOKEN');
+      process.exit(1);
+    }
+    const token = loadGitHubToken();
     fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<path>', {
       headers: {
         'Authorization': 'Bearer ' + token,

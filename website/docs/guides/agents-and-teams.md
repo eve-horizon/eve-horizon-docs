@@ -60,6 +60,7 @@ agents:
 | `workflow` | No | Named workflow to execute (from `workflows` in the manifest) |
 | `harness_profile` | No | Named profile from `x-eve.agents.profiles` in the manifest |
 | `access` | No | Scope restrictions: `envs`, `services`, `api_specs` |
+| `permissions` | No | Extra Eve API permissions requested for jobs run by this agent |
 | `policies` | No | Permission and git policies |
 | `schedule` | No | Cron-based heartbeat for periodic agents |
 | `gateway` | No | Chat gateway exposure settings |
@@ -74,6 +75,19 @@ The `permission_policy` field controls how much autonomy an agent has:
 | `auto_edit` | Autonomous — edits files and code without approval |
 | `never` | Read-only — cannot modify anything |
 | `yolo` | Fully autonomous in controlled environments (use carefully) |
+
+Agent job tokens include a default project/job scope. If an agent needs additional Eve API capabilities, declare them in its config and sync agents again:
+
+```yaml
+agents:
+  - slug: release-manager
+    skill: release-management
+    permissions:
+      - deployments:write
+      - jobs:read
+```
+
+The platform validates requested permissions before execution. Missing permissions surface as `403` responses from the API instead of broadening the token implicitly.
 
 ### Git policies
 

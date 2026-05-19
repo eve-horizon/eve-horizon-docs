@@ -146,9 +146,15 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 | `ingress.alias` | `string` | Custom subdomain alias (3-63 chars, lowercase alphanumeric + hyphens) |
 | `ingress.domains` | `string[]` | Custom domain names (e.g., `["myapp.com", "www.myapp.com"]`). Max 10 per service. Each gets its own Ingress + TLS cert via HTTP-01. |
 | `ingress.domain` | `string` | Override domain used for ingress hostname generation |
+| `ingress.timeout` | `string` | HTTP request/response timeout for nginx-backed app ingresses, e.g. `30s`, `5m`, `30m` |
+| `ingress.max_body_size` | `string` | HTTP request body limit for nginx-backed app ingresses, e.g. `10m` or `1g` |
+| `tcp_ingress` | `object` | Public L4 TCP listener configuration for raw TCP protocols |
+| `tcp_ingress.listeners` | `array` | Named listener definitions. Listener ports must match declared service ports. |
+| `tcp_ingress.allow_cidrs` | `string[]` | Optional source CIDR allowlist for providers that support it |
 | `api_spec` | `object` | Single API spec registration |
 | `api_specs` | `array<ApiSpec>` | Multiple API spec registrations |
 | `cli` | `object` | App CLI declaration (see [CLI Declaration](#cli-declaration) below) |
+| `object_store` | `object` | App bucket declarations under `object_store.buckets` |
 | `external` | `boolean` | If `true`, service is not deployed (external dependency) |
 | `url` | `string` | Connection string for external services |
 | `worker_type` | `string` | Worker pool type for worker-role services |
@@ -198,6 +204,44 @@ x-eve:
 When `bin` is set, the platform makes the executable available after clone (repo-bundled mode). When `image` is set, the platform injects the CLI via init container (image-based mode, same pattern as toolchains).
 
 Agents with `with_apis` referencing a service that has `x-eve.cli` automatically receive both the CLI on PATH and the API URL in environment variables.
+
+### TCP Ingress
+
+Use `x-eve.tcp_ingress` for device protocols and other raw TCP services that cannot use HTTP ingress:
+
+```yaml
+services:
+  device-edge:
+    ports:
+      - 33400
+      - 33500
+    x-eve:
+      tcp_ingress:
+        listeners:
+          - name: a1-gt06
+            port: 33400
+          - name: mictrack-mt700
+            port: 33500
+```
+
+`eve env diagnose <project> <env> --json` reports `.tcp_ingress[]`, and `eve tcp-ingress test <project> <env> --listener <name>` opens a TCP probe from the operator machine.
+
+### App Object Buckets
+
+Services can declare per-environment object buckets:
+
+```yaml
+services:
+  api:
+    x-eve:
+      object_store:
+        buckets:
+          - name: uploads
+            public: false
+            isolation: auto
+```
+
+On AWS, `isolation: auto` resolves to IRSA when the cluster has OIDC configured. Local and non-IRSA clusters can use shared app-bucket credentials. Deploy fails before starting the app when bucket provisioning or the requested isolation mode cannot be satisfied.
 
 ### File Mounts
 
@@ -465,25 +509,35 @@ Each step is one of the following:
 
 ## Workflows
 
-Workflows are manifest-defined jobs stored and returned as-is. The platform extracts `db_access` when present.
-Use the optional `hints` block to set workflow-level defaults (for example timeout, worker type, or gates).
+Workflows are manifest-defined job DAGs. The platform extracts `db_access`, `with_apis`, `resource_refs`, and `env_overrides` when present, then materializes one root job plus one child job per step.
+Use the optional `hints` block to set workflow-level defaults such as timeout, worker type, or gates.
 
 ```yaml
 workflows:
   nightly-audit:
     db_access: read_only
+    resource_refs: inherit
+    env_overrides:
+      AUDIT_BUCKET: ${secret.AUDIT_BUCKET}
     hints:
       worker_type: default-worker
     steps:
-      - agent:
+      - name: inspect
+        agent:
           prompt: "Audit errors and summarize anomalies"
+      - name: publish
+        depends_on: [inspect]
+        resource_refs: none
+        run: ./scripts/publish-audit.sh
 ```
 
 Invoke workflows with the CLI:
 
 ```bash
 eve workflow run nightly-audit --input '{"scope":"last-24h"}'
+eve workflow run nightly-audit --env-override AUDIT_BUCKET=staging-audits
 eve workflow invoke nightly-audit    # run and wait for result
+eve workflow retry <root-job-id> --failed
 ```
 
 ---
@@ -696,6 +750,8 @@ Eve automatically injects these variables into all deployed services:
 | `EVE_PROJECT_ID` | The project ID (e.g., `proj_01abc123...`) |
 | `EVE_ORG_ID` | The organization ID (e.g., `org_01xyz789...`) |
 | `EVE_ENV_NAME` | The environment name (e.g., `staging`, `production`) |
+| `EVE_SERVICE_TOKEN` | 90-day scoped JWT injected into deployed app services and refreshed on deploy |
+| `EVE_APP_API_URL_<SERVICE>` | Internal URL for services exposed through `with_apis` or app links |
 
 Use `EVE_API_URL` for backend/server-side calls within the cluster. Use `EVE_PUBLIC_API_URL` for browser or external calls.
 

@@ -383,6 +383,8 @@ Receive a reply:
 
 WebChat is configured as an integration with `provider: webchat`.
 
+For apps that send chat through the REST API and poll `thread_messages` for replies, use `provider: api`. The API provider is intentionally no-op on outbound push: agent replies are persisted to the thread, delivery succeeds, and the client reads them by polling instead of maintaining a WebSocket.
+
 ## Chat routing
 
 Chat routing controls how inbound messages reach the right agent, team, or workflow. Routes are defined in `chat.yaml`.

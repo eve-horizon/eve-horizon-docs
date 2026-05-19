@@ -141,7 +141,9 @@ Harnesses emit `llm.call` events after each provider call. These contain usage-o
 | `manual.*` | User-created via CLI or API | Any JSON |
 | `app.*` | Application-emitted | Any JSON |
 
-Custom events accept any `type` string. There is no schema enforcement — the payload can be arbitrary JSON.
+Custom events accept any `type` string. There is no schema enforcement -- the payload can be arbitrary JSON. `eve event emit` accepts `--payload` as an alias for `--payload-json`, plus optional context fields such as `--env`, `--ref-branch`, `--ref-sha`, `--dedupe-key`, `--mutation-id`, and `--request-id`.
+
+App-link event deliveries use the same spine. The producer project grants an event export, the consumer subscribes through `x-eve.app_links`, and matching deliveries use deterministic dedupe keys shaped like `app_link:<subscription_id>:<source_event_id>`.
 
 ## Trigger configuration
 
@@ -152,7 +154,7 @@ Triggers connect events to pipeline runs and workflow jobs. They are defined in 
 1. An event arrives in the events table with status `pending`
 2. The orchestrator checks queued events
 3. It loads the project manifest and checks all pipeline and workflow triggers
-4. If a trigger matches, it creates a pipeline run or workflow job
+4. If a trigger matches, it creates a pipeline run or workflow job and forwards matching event payload fields as workflow input
 5. The event is marked `completed` (or `failed` if routing errors)
 
 ### GitHub triggers
@@ -196,6 +198,25 @@ trigger:
     event: job.failed
     pipeline: deploy      # Optional: scope to a specific pipeline
 ```
+
+### App and custom event triggers
+
+Use event triggers when an app, integration, or app link emits a domain event that should start a workflow:
+
+```yaml
+workflows:
+  handle-payment:
+    trigger:
+      event:
+        type: app.payment.received
+        source: billing
+    steps:
+      - name: reconcile
+        agent:
+          name: finance-agent
+```
+
+The created workflow root stores the event payload in `hints.request_json`, so steps can read it the same way they read CLI `--input` data. Use idempotency keys on emitted events when upstream systems may retry.
 
 ### Cron triggers
 

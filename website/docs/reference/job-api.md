@@ -107,6 +107,8 @@ interface CreateJobRequest {
   harness_variant?: string;     // config overlay preset
   model?: string;               // model override
   reasoning_effort?: string;    // low, medium, high, x-high
+  harness_profile_override?: Record<string, unknown>;
+  env_overrides?: Record<string, string>;
 
   // Scheduling hints
   hints?: {
@@ -121,12 +123,15 @@ interface CreateJobRequest {
   // Git + workspace controls
   git?: GitControls;
   workspace?: WorkspaceControls;
+  resource_refs?: ResourceRef[];
 
   // Execution targeting
   env_name?: string | null;
   execution_mode?: string;      // persistent | ephemeral
 }
 ```
+
+Harness profile overrides and request-supplied `env_overrides` require `jobs:harness_override`; secret-backed env override values also require `secrets:read`. `resource_refs` are hydrated before launch and can be narrowed by workflow step policy.
 
 ### Manifest Defaults
 
@@ -499,6 +504,8 @@ These variables are injected by the worker during job execution:
 | `EVE_AGENT_ID` | Agent identifier |
 | `EVE_PARENT_JOB_ID` | Parent job ID (for coordination) |
 | `EVE_RESOURCE_INDEX` | Path to `.eve/resources/index.json` (when resource refs are used) |
+| `EVE_JOB_TOKEN` | Scoped job token for Eve API and app API calls |
+| `EVE_APP_API_URL_<SERVICE>` | URL for app APIs granted through `with_apis` |
 
 ## REST API Endpoints
 
