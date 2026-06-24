@@ -82,7 +82,7 @@ Three things need setting up inside your new project directory.
 **Set profile defaults** — this tells the CLI which org and project to target:
 
 ```bash
-eve profile create staging --api-url https://api.eh1.incept5.dev
+eve profile create staging --api-url https://api.eve.example.com
 eve profile use staging
 eve profile set --org org_MyCompany --project proj_xxx
 ```
@@ -257,13 +257,13 @@ Deployment submitted.
 Your app is live. The URL follows this pattern:
 
 ```
-https://api.{orgSlug}-{projectSlug}-sandbox.eh1.incept5.dev
+https://api.{orgSlug}-{projectSlug}-sandbox.eve.example.com
 ```
 
 Test it:
 
 ```bash
-curl https://api.myco-myapp-sandbox.eh1.incept5.dev/health
+curl https://api.myco-myapp-sandbox.eve.example.com/health
 # {"status":"ok"}
 ```
 
@@ -271,10 +271,10 @@ The starter template includes a todos API and a simple HTML frontend. Try it out
 
 ```bash
 # List todos (empty at first)
-curl https://api.myco-myapp-sandbox.eh1.incept5.dev/todos
+curl https://api.myco-myapp-sandbox.eve.example.com/todos
 
 # Create one
-curl -X POST https://api.myco-myapp-sandbox.eh1.incept5.dev/todos \
+curl -X POST https://api.myco-myapp-sandbox.eve.example.com/todos \
   -H "Content-Type: application/json" \
   -d '{"title":"Hello from Eve"}'
 ```

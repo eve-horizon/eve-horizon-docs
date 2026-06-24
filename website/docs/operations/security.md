@@ -56,7 +56,7 @@ Eve uses RS256 JWT tokens as the primary authentication mechanism. When Supabase
   "type": "user",
   "orgs": [
     { "id": "org_ManualTestOrg", "role": "owner" },
-    { "id": "org_Incept5", "role": "admin" }
+    { "id": "org_example", "role": "admin" }
   ],
   "iat": 1706000000,
   "exp": 1706086400

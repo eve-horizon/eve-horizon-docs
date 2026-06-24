@@ -20,7 +20,7 @@ eve project ensure --name "My App" --slug myapp \
   --repo-url git@github.com:acme/myapp.git --branch main
 ```
 
-The project slug is immutable after creation — it appears in job IDs (`myapp-a3f2dd12`) and deployment URLs (`web.acme-myapp-staging.eh1.incept5.dev`), so choose it carefully.
+The project slug is immutable after creation — it appears in job IDs (`myapp-a3f2dd12`) and deployment URLs (`web.acme-myapp-staging.eve.example.com`), so choose it carefully.
 
 ## Jobs
 

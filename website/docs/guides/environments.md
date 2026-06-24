@@ -82,7 +82,7 @@ Environment values support built-in variables that resolve at deploy time:
 | `${PROJECT_ID}` | Project ID | `proj_01kfew...` |
 | `${ORG_ID}` | Organization ID | `org_Example...` |
 | `${ORG_SLUG}` | Organization slug | `acme` |
-| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eh1.incept5.dev` |
+| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eve.example.com` |
 | `${secret.KEY}` | Secret value | `${secret.DB_PASSWORD}` |
 | `${managed.<svc>.<field>}` | Managed DB field | `${managed.db.url}` |
 
@@ -496,7 +496,7 @@ services:
     x-eve:
       ingress:
         public: true
-        alias: myapp              # myapp.eh1.incept5.dev still works
+        alias: myapp              # myapp.eve.example.com still works
         domains:
           - myapp.com
           - www.myapp.com
@@ -507,7 +507,7 @@ After deploying, Eve registers the domains and tells you where to point your DNS
 ```bash
 eve env deploy proj_xxx prod --tag v1.0.0
 # Custom domain myapp.com: DNS not pointing to platform.
-# Point to ingress.eh1.incept5.dev and run: eve domain verify myapp.com
+# Point to ingress.eve.example.com and run: eve domain verify myapp.com
 ```
 
 Point your DNS, then verify:

@@ -196,7 +196,7 @@ Manifest environment values support variable interpolation at deploy time:
 | `${ORG_ID}` | Organization ID | `org_01xyz...` |
 | `${ORG_SLUG}` | Organization slug | `acme` |
 | `${COMPONENT_NAME}` | Current service name | `api` |
-| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eh1.incept5.dev` |
+| `${SSO_URL}` | Platform SSO broker URL | `https://sso.eve.example.com` |
 | `${secret.KEY}` | Secret value | `${secret.DB_PASSWORD}` |
 | `${managed.<svc>.<field>}` | Managed DB value | `${managed.db.url}` |
 

@@ -89,7 +89,7 @@ Works well. Downloads starter template, strips git history, inits fresh repo, in
 
 Run from inside the project directory:
 ```bash
-eve profile create staging --api-url https://api.eh1.incept5.dev
+eve profile create staging --api-url https://api.eve.example.com
 eve profile use staging
 eve profile set --org org_xxx --project proj_xxx
 ```
@@ -172,10 +172,10 @@ The app is live at the environment URL.
 ### 11. Verify the deployed app
 
 ```bash
-curl https://api.alexdev-evqs-sandbox.eh1.incept5.dev/health
+curl https://api.alexdev-evqs-sandbox.eve.example.com/health
 # {"status":"ok"}
 
-curl https://api.alexdev-evqs-sandbox.eh1.incept5.dev/todos
+curl https://api.alexdev-evqs-sandbox.eve.example.com/todos
 # []
 
 curl -X POST .../todos -H "Content-Type: application/json" -d '{"title":"Hello from Eve"}'

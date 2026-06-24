@@ -53,10 +53,10 @@ Deployed via Eve Horizon under the **Incept5** org, project slug `evdocs`.
 
 ```bash
 # First time: create a staging profile and login
-eve profile create staging --api-url https://api.eh1.incept5.dev
+eve profile create staging --api-url https://api.eve.example.com
 eve profile use staging
 eve auth login --email you@incept5.com --ssh-key ~/.ssh/id_ed25519.pub
-eve profile set --org org_Incept5 --project proj_01khygftvpf24t3yyetbkk9nyn
+eve profile set --org org_example --project proj_01khygftvpf24t3yyetbkk9nyn
 
 # Sync manifest and deploy to staging
 eve project sync --repo-dir .

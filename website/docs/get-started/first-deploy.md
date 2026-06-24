@@ -265,16 +265,16 @@ Your service is now accessible at a URL following the pattern:
 {service}.{orgSlug}-{projectSlug}-{env}.{domain}
 ```
 
-For example, if your org slug is `acme`, project slug is `myapp`, and the domain is `eh1.incept5.dev`:
+For example, if your org slug is `acme`, project slug is `myapp`, and the domain is `eve.example.com`:
 
 ```
-https://api.acme-myapp-staging.eh1.incept5.dev
+https://api.acme-myapp-staging.eve.example.com
 ```
 
 Test it:
 
 ```bash
-curl https://api.acme-myapp-staging.eh1.incept5.dev/health
+curl https://api.acme-myapp-staging.eve.example.com/health
 ```
 
 ## What you have built

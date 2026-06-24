@@ -146,8 +146,8 @@ Every deployed service automatically receives a set of environment variables fro
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `EVE_API_URL` | Internal cluster URL for server-to-server calls | `http://eve-api:4701` |
-| `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing code | `https://api.eh1.incept5.dev` |
-| `EVE_SSO_URL` | SSO broker URL for app login/session bootstrap | `https://sso.eh1.incept5.dev` |
+| `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing code | `https://api.eve.example.com` |
+| `EVE_SSO_URL` | SSO broker URL for app login/session bootstrap | `https://sso.eve.example.com` |
 | `EVE_PROJECT_ID` | The project ID | `proj_01abc123...` |
 | `EVE_ORG_ID` | The organization ID | `org_01xyz789...` |
 | `EVE_ENV_NAME` | The environment name | `staging`, `production` |

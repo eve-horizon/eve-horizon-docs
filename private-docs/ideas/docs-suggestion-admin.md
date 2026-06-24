@@ -38,7 +38,7 @@ Browser                    Eve SSO                  Docs Server
   │  show "Sign in" button     │                       │
   │                            │                       │
   ├─ redirect ────────────────►│                       │
-  │  sso.eh1.incept5.dev/login │                       │
+  │  sso.eve.example.com/login │                       │
   │  ?redirect_to=/admin       │                       │
   │                            │                       │
   │  (user authenticates)      │                       │
@@ -57,7 +57,7 @@ Browser                    Eve SSO                  Docs Server
   │                            │       JWKS verify     │
   │                            │       (jose, cached)  │
   │                            │       check orgs[]    │
-  │                            │       for org_Incept5 │
+  │                            │       for org_example │
   │◄── 201 Created ───────────┼──────────────────────┤
 ```
 
@@ -73,7 +73,7 @@ Browser                    Eve SSO                  Docs Server
   the cookie for an `access_token` (RS256 Eve JWT).
 - **Verification**: On every API call, the docs server validates the JWT locally
   using `jose` + `createRemoteJWKSet` against Eve's JWKS endpoint. The `orgs`
-  claim in the JWT contains org membership — check for `org_Incept5`. **No
+  claim in the JWT contains org membership — check for `org_example`. **No
   per-request call to Eve's API.** JWKS keys are cached by `jose` automatically.
 - **No session state**: Stateless JWT verification. The docs server stores
   nothing. Tokens expire per Eve's standard TTL.
@@ -81,7 +81,7 @@ Browser                    Eve SSO                  Docs Server
 
 ### Implementation Notes
 
-- Eve SSO lives at `sso.{cluster-domain}` (e.g., `sso.eh1.incept5.dev`).
+- Eve SSO lives at `sso.{cluster-domain}` (e.g., `sso.eve.example.com`).
   Endpoints: `/login?redirect_to=<url>` (redirect), `/session` (token exchange).
 - The JWKS URL is derived from `EVE_API_URL`: `${EVE_API_URL}/.well-known/jwks.json`.
   Both `EVE_API_URL` and `EVE_PUBLIC_API_URL` are auto-injected by the platform.
@@ -179,7 +179,7 @@ Response:
   {
     "job_id": "evdocs-a3f2dd12",
     "status": "ready",
-    "url": "https://api.eh1.incept5.dev/jobs/evdocs-a3f2dd12"
+    "url": "https://api.eve.example.com/jobs/evdocs-a3f2dd12"
   }
 ```
 

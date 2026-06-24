@@ -746,7 +746,7 @@ Eve automatically injects these variables into all deployed services:
 | Variable | Description |
 |----------|-------------|
 | `EVE_API_URL` | Internal cluster URL for server-to-server calls (e.g., `http://eve-api:4701`) |
-| `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing apps (e.g., `https://api.eh1.incept5.dev`) |
+| `EVE_PUBLIC_API_URL` | Public ingress URL for browser-facing apps (e.g., `https://api.eve.example.com`) |
 | `EVE_PROJECT_ID` | The project ID (e.g., `proj_01abc123...`) |
 | `EVE_ORG_ID` | The organization ID (e.g., `org_01xyz789...`) |
 | `EVE_ENV_NAME` | The environment name (e.g., `staging`, `production`) |
