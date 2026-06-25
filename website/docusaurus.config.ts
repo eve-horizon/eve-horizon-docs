@@ -40,7 +40,7 @@ const config: Config = {
   url: 'https://docs.eve-horizon.dev',
   baseUrl: '/',
 
-  organizationName: 'incept5',
+  organizationName: 'eve-horizon',
   projectName: 'eve-horizon-docs',
 
   onBrokenLinks: 'throw',
@@ -63,7 +63,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/incept5/eve-horizon-docs/edit/main/website/',
+            'https://github.com/eve-horizon/eve-horizon-docs/edit/main/website/',
           showLastUpdateTime: true,
         },
         blog: {
@@ -141,7 +141,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://github.com/incept5/eve-horizon',
+          href: 'https://github.com/eve-horizon/eve-horizon',
           label: 'GitHub',
           position: 'right',
         },
@@ -168,11 +168,11 @@ const config: Config = {
           title: 'More',
           items: [
             { label: 'Changelog', to: '/docs/operations/sync-docs-changelog' },
-            { label: 'GitHub', href: 'https://github.com/incept5/eve-horizon' },
+            { label: 'GitHub', href: 'https://github.com/eve-horizon/eve-horizon' },
           ],
         },
       ],
-      copyright: `Copyright ${new Date().getFullYear()} Incept5. Built with Docusaurus.`,
+      copyright: `Copyright ${new Date().getFullYear()} Eve Horizon. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

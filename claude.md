@@ -31,7 +31,7 @@ with the established system.
 
 When syncing from the main Eve Horizon source, assume the checkout is located at:
 
-`../../incept5/eve-horizon`
+`../../eve-horizon/eve-horizon`
 
 Do not hardcode this path in automation; read it from config/environment where possible.
 
@@ -45,7 +45,7 @@ Do not hardcode this path in automation; read it from config/environment where p
 
 ## Deployment
 
-Eve staging environment under Incept5 org, project slug `evdocs`.
+Eve staging environment under example org, project slug `evdocs`.
 
 ```bash
 eve profile use staging
@@ -53,8 +53,8 @@ eve project sync --repo-dir .
 eve env deploy staging --ref main --repo-dir .
 ```
 
-- **Org:** Incept5 (`org_example`)
-- **Project:** Eve Horizon Docs (`proj_01khygftvpf24t3yyetbkk9nyn`, slug: `evdocs`)
+- **Org:** Eve Horizon (`org_example`)
+- **Project:** Eve Horizon Docs (`proj_01abc...`, slug: `evdocs`)
 - **Pipeline:** build → release → deploy (single `docs` service)
 
 ## References

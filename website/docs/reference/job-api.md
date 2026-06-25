@@ -25,8 +25,8 @@ Job -> JobAttempt -> Session -> ExecutionProcess
 
 | Entity | Format | Example |
 |--------|--------|---------|
-| Organization | `org_{base32}` | `org_01H455VBFQG3GRPZXYXR8TJKM` |
-| Project | `proj_{base32}` | `proj_01H455VBFQG3GRPZXYXR8TJKM` |
+| Organization | `org_{base32}` | `org_01xyz...` |
+| Project | `proj_{base32}` | `proj_01abc...` |
 | Root job | `{slug}-{hash8}` | `myproj-a3f2dd12` |
 | Child job | `{parent}.{n}` | `myproj-a3f2dd12.1` |
 | Attempt | UUID + `attempt_number` | `attempt_number: 2` |

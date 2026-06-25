@@ -129,11 +129,11 @@ AgentPacks are the recommended approach. Declare packs in `.eve/manifest.yaml` u
 x-eve:
   packs:
     # Remote pack (full repo)
-    - source: github.com/incept5/eve-skillpacks
+    - source: github.com/eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
 
     # Remote pack (subset + pins)
-    - source: github.com/incept5/eve-skillpacks
+    - source: github.com/eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
       packs: [eve-work, eve-se]
 ```
@@ -155,7 +155,7 @@ The legacy flow uses a `skills.txt` manifest file with one source per line:
 ./skillpacks/my-pack/*
 
 # Remote sources
-https://github.com/incept5/eve-skillpacks
+https://github.com/eve-horizon/eve-skillpacks
 git@github.com:org/private-skills
 ```
 
@@ -315,7 +315,7 @@ The `skills.txt` file is a flat manifest of skill sources. The install hook read
 ./skillpacks/another-pack/special-skill
 
 # Remote sources
-https://github.com/incept5/eve-skillpacks
+https://github.com/eve-horizon/eve-skillpacks
 git@github.com:your-org/team-skills
 ```
 

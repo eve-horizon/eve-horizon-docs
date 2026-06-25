@@ -684,7 +684,7 @@ x-eve:
     - source: ./skillpacks/my-pack
 
     # Remote pack (ref required for remote sources)
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
       packs: [eve-work, eve-se]
 

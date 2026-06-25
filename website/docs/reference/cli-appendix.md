@@ -2330,7 +2330,7 @@ Initialize a new Eve Horizon project from a template. Downloads the starter temp
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `[directory]` | string | `.` | Target directory |
-| `--template <url>` | string | `https://github.com/incept5/eve-horizon-starter` | Template repository URL |
+| `--template <url>` | string | `https://github.com/eve-horizon/eve-horizon-starter` | Template repository URL |
 | `--branch <branch>` | string | `main` | Branch to use |
 | `--skip-skills` | boolean | `false` | Skip automatic skill installation |
 

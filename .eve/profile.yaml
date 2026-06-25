@@ -3,4 +3,4 @@ profiles:
   staging:
     api_url: https://api.eve.example.com
     org_id: org_example
-    project_id: proj_01khygftvpf24t3yyetbkk9nyn
+    project_id: proj_01abc...

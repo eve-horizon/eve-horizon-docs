@@ -118,7 +118,7 @@ The `skills.txt` file lists one skill source per line. Sources can be local path
 ./skillpacks/my-pack/*
 
 # Remote sources
-https://github.com/incept5/eve-skillpacks
+https://github.com/eve-horizon/eve-skillpacks
 git@github.com:org/private-skills
 ```
 
@@ -146,11 +146,11 @@ x-eve:
     - source: ./skillpacks/my-pack
 
     # Remote pack (ref required, full repo)
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
 
     # Remote pack with subset (ref + packs)
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
       packs: [eve-work, eve-se]
 ```
@@ -230,7 +230,7 @@ For AgentPacks, add the local source to your manifest:
 x-eve:
   packs:
     - source: ./skillpacks/my-pack
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
       packs: [eve-work]
 ```
@@ -295,7 +295,7 @@ eve skills install
 
 ## Official packs
 
-Eve publishes three public skill packs in the [eve-skillpacks](https://github.com/incept5/eve-skillpacks) repository:
+Eve publishes three public skill packs in the [eve-skillpacks](https://github.com/eve-horizon/eve-skillpacks) repository:
 
 ### eve-work
 
@@ -318,7 +318,7 @@ Skills for architectural thinking on Eve Horizon. Includes agent-native design p
 Install all official packs at once:
 
 ```txt
-https://github.com/incept5/eve-skillpacks
+https://github.com/eve-horizon/eve-skillpacks
 ```
 
 Or install selectively by cloning the repo and referencing specific packs or skills.
@@ -337,7 +337,7 @@ x-eve:
     - source: ./skillpacks/my-pack
 
     # Remote pack (pinned to commit)
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
 
     # Per-pack agent targeting
@@ -350,8 +350,8 @@ x-eve:
 | Format | Example |
 |--------|---------|
 | Local path | `./skillpacks/my-pack` |
-| GitHub shorthand | `incept5/eve-skillpacks` |
-| GitHub prefixed | `github:incept5/eve-skillpacks` |
+| GitHub shorthand | `eve-horizon/eve-skillpacks` |
+| GitHub prefixed | `github:eve-horizon/eve-skillpacks` |
 | Git URL | `git@github.com:org/private-skills` |
 
 Remote sources require a `ref` field with a 40-character SHA. This ensures every team member and every CI run resolves the exact same skill versions.

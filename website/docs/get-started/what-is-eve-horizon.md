@@ -56,7 +56,7 @@ Agents, skills, and teams are distributed through **Agent Packs** — composable
 ```yaml
 x-eve:
   packs:
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: abc123...
     - source: ./skillpacks/my-team
 ```

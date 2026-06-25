@@ -14,7 +14,7 @@ not just file diffs.
 
 ## Prerequisites
 
-- `GITHUB_TOKEN` env var (fine-grained PAT with `contents:read` on `incept5/eve-horizon`),
+- `GITHUB_TOKEN` env var (fine-grained PAT with `contents:read` on `eve-horizon/eve-horizon`),
   or repo-root `secrets.env` containing `GITHUB_TOKEN=...`
 - Node.js available in PATH (for `fetch()` API calls)
 - `.sync-state.json` and `.sync-map.json` in the repo root
@@ -45,7 +45,7 @@ node -e "
     process.exit(1);
   }
   const token = loadGitHubToken();
-  fetch('https://api.github.com/repos/incept5/eve-horizon/<endpoint>', {
+  fetch('https://api.github.com/repos/eve-horizon/eve-horizon/<endpoint>', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/vnd.github+json',
@@ -98,7 +98,7 @@ node -e "
     process.exit(1);
   }
   const token = loadGitHubToken();
-  fetch('https://api.github.com/repos/incept5/eve-horizon', {
+  fetch('https://api.github.com/repos/eve-horizon/eve-horizon', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/vnd.github+json',
@@ -119,7 +119,7 @@ GitHub API access.
 
 Read `.sync-state.json` from the repo root:
 - Extract `last_synced_commit`
-- Extract `eve_horizon_repo` (should be `incept5/eve-horizon`)
+- Extract `eve_horizon_repo` (should be `eve-horizon/eve-horizon`)
 
 If `.sync-state.json` is missing or unreadable, create it with `last_synced_commit: null`.
 
@@ -163,7 +163,7 @@ node -e "
   }
   const token = loadGitHubToken();
   const lastCommit = '<LAST_SYNCED_COMMIT>';
-  fetch('https://api.github.com/repos/incept5/eve-horizon/compare/' + lastCommit + '...main', {
+  fetch('https://api.github.com/repos/eve-horizon/eve-horizon/compare/' + lastCommit + '...main', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/vnd.github+json',
@@ -235,7 +235,7 @@ node -e "
     process.exit(1);
   }
   const token = loadGitHubToken();
-  fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<plan_path>', {
+  fetch('https://api.github.com/repos/eve-horizon/eve-horizon/contents/<plan_path>', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/vnd.github+json',
@@ -602,7 +602,7 @@ node -e "
     process.exit(1);
   }
   const token = loadGitHubToken();
-  fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<path>', {
+  fetch('https://api.github.com/repos/eve-horizon/eve-horizon/contents/<path>', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/vnd.github+json',
@@ -640,7 +640,7 @@ After all workers complete:
        process.exit(1);
      }
      const token = loadGitHubToken();
-     fetch('https://api.github.com/repos/incept5/eve-horizon/commits/main', {
+     fetch('https://api.github.com/repos/eve-horizon/eve-horizon/commits/main', {
        headers: {
          'Authorization': 'Bearer ' + token,
          'Accept': 'application/vnd.github+json',
@@ -690,7 +690,7 @@ After all workers complete:
      - Read `website/docs/operations/sync-docs-changelog.md`
      - Add a new row under the `## Entries` table with:
        - UTC date from `synced_at`
-       - full commit link (`https://github.com/incept5/eve-horizon/commit/<full SHA>`)
+       - full commit link (`https://github.com/eve-horizon/eve-horizon/commit/<full SHA>`)
        - `commits_synced`
        - comma-separated `docs_updated`
        - one-line `summary` text (lead with capability names, not file names)
@@ -769,7 +769,7 @@ the changes and pushing to main. The push triggers the existing deploy pipeline.
       process.exit(1);
     }
     const token = loadGitHubToken();
-    fetch('https://api.github.com/repos/incept5/eve-horizon/contents/<path>', {
+    fetch('https://api.github.com/repos/eve-horizon/eve-horizon/contents/<path>', {
       headers: {
         'Authorization': 'Bearer ' + token,
         'Accept': 'application/vnd.github.raw+json',

@@ -250,7 +250,7 @@ function QuickStartTerminal() {
         </div>
         <div className={styles.terminalLine}>
           <span className={styles.terminalPrompt}>$ </span>
-          <span className={styles.terminalCommand}>{'echo "https://github.com/incept5/eve-skillpacks" >> skills.txt'}</span>
+          <span className={styles.terminalCommand}>{'echo "https://github.com/eve-horizon/eve-skillpacks" >> skills.txt'}</span>
         </div>
         <div className={styles.terminalLine}>
           <span className={styles.terminalPrompt}>$ </span>

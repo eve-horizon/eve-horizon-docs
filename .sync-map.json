@@ -1,6 +1,6 @@
 {
   "docs_root": "website/docs",
-  "source_repo": "incept5/eve-horizon",
+  "source_repo": "eve-horizon/eve-horizon",
   "watch_paths": [
     "docs/system/",
     "docs/plans/",

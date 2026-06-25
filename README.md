@@ -1,7 +1,7 @@
 # Eve Horizon Docs
 
 
-Documentation site for [Eve Horizon](https://github.com/incept5/eve-horizon) — the platform for running AI-powered software engineering workflows against your codebase.
+Documentation site for [Eve Horizon](https://github.com/eve-horizon/eve-horizon) — the platform for running AI-powered software engineering workflows against your codebase.
 
 ## What's here
 
@@ -42,21 +42,21 @@ See the Mermaid section of the design plan for full conventions.
 
 The Eve Horizon source repository is normally expected at:
 
-`../../incept5/eve-horizon`
+`../../eve-horizon/eve-horizon`
 
 If your checkout differs, update the skill config or environment overrides used by
 `private-skills/update-eve-docs`.
 
 ## Deployment
 
-Deployed via Eve Horizon under the **Incept5** org, project slug `evdocs`.
+Deployed via Eve Horizon under the **Eve Horizon** org, project slug `evdocs`.
 
 ```bash
 # First time: create a staging profile and login
 eve profile create staging --api-url https://api.eve.example.com
 eve profile use staging
 eve auth login --email you@incept5.com --ssh-key ~/.ssh/id_ed25519.pub
-eve profile set --org org_example --project proj_01khygftvpf24t3yyetbkk9nyn
+eve profile set --org org_example --project proj_01abc...
 
 # Sync manifest and deploy to staging
 eve project sync --repo-dir .

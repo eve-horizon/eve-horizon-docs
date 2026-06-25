@@ -12,7 +12,7 @@ Eve Horizon is built around a small set of composable primitives. Understanding 
 
 **Organizations** are the top-level container for billing, users, and access control. An organization holds one or more projects.
 
-**Projects** represent a single Git repository. A project has a `slug` (4-8 characters, like `myproj`) that becomes part of every job ID and deployment URL. Projects are identified by TypeIDs (e.g., `proj_01H455VBFQG3GRPZXYXR8TJKM`).
+**Projects** represent a single Git repository. A project has a `slug` (4-8 characters, like `myproj`) that becomes part of every job ID and deployment URL. Projects are identified by TypeIDs (e.g., `proj_01abc...`).
 
 ```bash
 eve org ensure "Acme Corp"

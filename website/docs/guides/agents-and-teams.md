@@ -551,7 +551,7 @@ x-eve:
     config_path: agents/chat.yaml
   install_agents: [claude-code]
   packs:
-    - source: incept5/eve-skillpacks
+    - source: eve-horizon/eve-skillpacks
       ref: 0123456789abcdef0123456789abcdef01234567
 ```
 
