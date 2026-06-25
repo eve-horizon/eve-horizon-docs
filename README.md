@@ -55,7 +55,7 @@ Deployed via Eve Horizon under the **Eve Horizon** org, project slug `evdocs`.
 # First time: create a staging profile and login
 eve profile create staging --api-url https://api.eve.example.com
 eve profile use staging
-eve auth login --email you@incept5.com --ssh-key ~/.ssh/id_ed25519.pub
+eve auth login --email you.com --ssh-key ~/.ssh/id_ed25519.pub
 eve profile set --org org_example --project proj_01abc...
 
 # Sync manifest and deploy to staging
