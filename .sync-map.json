@@ -222,6 +222,10 @@
       "sources": ["docs/system/secrets.md"],
       "description": "Secrets management"
     },
+    "guides/security-profiles.md": {
+      "sources": ["docs/system/security-profiles.md", "docs/system/egress-policies.md", "docs/system/manifest.md", "docs/system/deployment.md", "docs/system/runner-pods.md", "docs/system/harness-execution.md", "docs/system/db.md"],
+      "description": "Security profiles and app requirements under strict"
+    },
     "guides/authentication.md": {
       "sources": ["docs/system/auth.md", "docs/system/identity-providers.md", "docs/system/eve-auth-sdk.md", "docs/system/app-sso-integration.md"],
       "description": "Authentication, SSO, and identity providers"

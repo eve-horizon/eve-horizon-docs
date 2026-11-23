@@ -35,6 +35,13 @@ The core principles:
 - **Defense-in-depth agent isolation** -- three independent layers that must all be bypassed simultaneously
 - **Multi-scope secret management** -- secrets encrypted at rest, never returned in plaintext
 - **Policy-as-code access control** -- groups, roles, and scoped bindings defined in `.eve/access.yaml`
+- **Security profiles** -- `audit` records what the hardening rules would refuse, `strict` enforces them
+
+## Security profiles
+
+A security profile decides what each of Eve's hardening rules does: `audit` keeps today's behaviour and records a finding for anything `strict` would refuse, and `strict` enforces the rule. (`legacy`, which does neither, is deprecated in 0.1.330 and removed in 0.1.331.) System admins set profiles for the instance, an organization, a project or new projects, check readiness with `eve doctor security`, and move a project with `eve system security profile strict --project <id>` (back with `audit`).
+
+Under `strict` an app must, among other things, declare ingress on every service with ports, run its images as a numeric non-root user, declare the internet hosts it calls, connect long-running services to managed databases through declared roles, and route cross-project calls through app links. See [Security Profiles](/docs/guides/security-profiles) for the full checklist.
 
 ## JWT authentication
 

@@ -29,6 +29,7 @@ const sidebars: SidebarsConfig = {
         'guides/local-development',
         'guides/authentication',
         'guides/secrets',
+        'guides/security-profiles',
         'guides/storage',
         'guides/fullstack-app-design',
         'guides/agentic-app-design',

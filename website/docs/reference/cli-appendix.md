@@ -1601,6 +1601,37 @@ eve docs watch --org org_xxx --path /world-model --since now
 
 ---
 
+## eve doctor {#eve-doctor}
+
+Checks across the instance (system admins only).
+
+```
+eve doctor <subcommand> [options]
+```
+
+### eve doctor security {#eve-doctor-security}
+
+Security profiles per org and project, and what `strict` refused or would refuse. See [Security Profiles](/docs/guides/security-profiles).
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--org <id>` | string | — | Limit the report to one organization |
+| `--project <id>` | string | — | Limit the report to one project |
+| `--days <n>` | number | `14` | Findings window in days (1-90) |
+| `--json` | boolean | — | Machine-readable output, including `legacy_levels` and each project's `strict_checklist` |
+
+The report lists each organization and project with its effective profile and the rule sets its `strict` covers, findings grouped by rule, and, for each project not yet `strict`, `ready for strict` or `not ready:` with the blockers.
+
+**Examples:**
+
+```bash
+eve doctor security
+eve doctor security --project proj_xxx --days 7
+eve doctor security --json
+```
+
+---
+
 ## eve cloud-fs {#eve-cloud-fs}
 
 Mount, browse, and search external cloud file systems connected through Eve integrations. Google Drive is the first supported provider.
@@ -4109,6 +4140,39 @@ Manage orchestrator concurrency settings.
 ```bash
 eve system orchestrator status
 eve system orchestrator set-concurrency 8
+```
+
+### eve system security {#eve-system-security}
+
+Set the security profile of the instance, new projects, an organization or a project, or bring environments in line with the profiles (system admins only). See [Security Profiles](/docs/guides/security-profiles).
+
+```
+eve system security profile <audit|strict|clear> [--org <id> | --project <id> | --new-projects] [--force]
+eve system security reconcile
+```
+
+| Argument / flag | Description |
+|-----------------|-------------|
+| `audit` | Today's behaviour, plus a finding for what `strict` would refuse |
+| `strict` | Hardening rules of the current rule set are enforced; rules from later releases run under `audit` until `strict` is set again |
+| `clear` | Remove an override so the level above applies |
+| `legacy` | Deprecated in 0.1.330 (warns) and refused from 0.1.331; use `audit` |
+| `--org <id>` | Set an organization (overrides the instance) |
+| `--project <id>` | Set a project (overrides its organization) |
+| `--new-projects` | Set the profile written onto each new project |
+| `--force` | Set the instance `strict` although v1 secrets, plain OAuth columns or registry pull secrets on an older key remain |
+| `reconcile` | Bring every environment's network policies and registry pull secret in line with the profiles, without restarting anything |
+
+With no `--org`, `--project` or `--new-projects`, the command sets the instance.
+
+**Examples:**
+
+```bash
+eve system security profile audit
+eve system security profile strict --project proj_xxx
+eve system security profile audit --project proj_xxx      # back out
+eve system security profile strict --new-projects
+eve system security reconcile
 ```
 
 ---

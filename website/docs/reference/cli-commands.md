@@ -134,7 +134,8 @@ Profiles store persistent defaults so you do not need to repeat `--org`, `--proj
 | [eve analytics](/docs/reference/cli-appendix#eve-analytics) | Org analytics -- job counts, pipeline success rates, environment health |
 | [eve traces](/docs/reference/cli-appendix#eve-traces) | Query request traces by request ID, trace ID, service, route, or error state |
 | [eve notifications](/docs/reference/cli-appendix#eve-notifications) | Send project-scoped Slack notifications from operators or workflow actions |
-| [eve system](/docs/reference/cli-appendix#eve-system) | System health, status, logs, pods, events, orchestrator settings (admin) |
+| [eve system](/docs/reference/cli-appendix#eve-system) | System health, status, logs, pods, events, orchestrator settings, security profiles (admin) |
+| [eve doctor](/docs/reference/cli-appendix#eve-doctor) | Instance checks; `eve doctor security` reports security profiles, findings and strict readiness (admin) |
 
 ### Migration
 
