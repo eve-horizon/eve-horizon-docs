@@ -280,7 +280,7 @@ graph LR
    eve env deploy staging --ref <sha> --inputs '{"release_id":"rel_xxx"}'
    ```
 
-4. **Promote to production** — same pattern, possibly with an approval gate:
+4. **Promote to production** — same pattern:
    ```bash
    eve env deploy production --ref <sha> --inputs '{"release_id":"rel_xxx"}'
    ```

@@ -71,7 +71,7 @@ graph LR
   Verify --> Ship["Ship"]
 ```
 
-The software factory is one pattern, not a fixed pipeline. Each stage is an agent (or a team of agents) defined in a pack. By default agents work autonomously — human approval gates are opt-in, configured per environment or per skill when you want them.
+The software factory is one pattern, not a fixed pipeline. Each stage is an agent (or a team of agents) defined in a pack. By default agents work autonomously — human approval gates are opt-in, configured per skill when you want them.
 
 ## What can you build?
 

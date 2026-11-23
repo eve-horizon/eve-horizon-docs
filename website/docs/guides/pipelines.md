@@ -388,13 +388,19 @@ This shows the build spec, all runs, artifacts, recent logs, and error classific
 
 ## Approving and cancelling runs
 
-### Approval gates
+### Approving a run
 
-When an environment has `approval: required`, pipeline steps that target that environment pause and wait for approval:
+Approve a pipeline run from the CLI:
 
 ```bash
 eve pipeline approve prun_01abc123
 ```
+
+Approving records who approved the run (`approved_by` and the audit log). Under the project's `strict` [security profile](./security-profiles.md), only a person's own token may approve; job, service, service-principal and app-link tokens get 403.
+
+:::note
+An environment's `approval` setting in the manifest is not a deploy gate: Eve does not enforce it, and the `strict` profile refuses it at sync. Remove it from your manifest. See [Environment approval](./environments.md#environment-approval).
+:::
 
 ### Cancellation
 
@@ -503,7 +509,7 @@ eve env deploy staging \
   --ref 0123456789abcdef0123456789abcdef01234567 \
   --inputs '{"release_id": "rel_01abc123"}'
 
-# 4. Promote to production (approval gate)
+# 4. Promote to production (same release)
 eve env deploy production \
   --ref 0123456789abcdef0123456789abcdef01234567 \
   --inputs '{"release_id": "rel_01abc123"}'
@@ -521,7 +527,6 @@ environments:
       smoke_test: true
   production:
     pipeline: deploy
-    approval: required
 ```
 
 ## PR preview environments
@@ -685,6 +690,9 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
   api:
     build:
@@ -692,7 +700,7 @@ services:
     image: acme-api
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}   # declared role (see Services & Databases)
     depends_on:
       db:
         condition: service_healthy
@@ -714,7 +722,6 @@ environments:
     pipeline: deploy
   production:
     pipeline: deploy
-    approval: required
 
 pipelines:
   deploy:

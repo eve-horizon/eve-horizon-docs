@@ -409,15 +409,15 @@ environments:
       smoke_test: true
 ```
 
-## Approval gates
-
-Pipeline runs can require approval before proceeding:
+## Approving runs
 
 ```bash
 eve pipeline approve <run-id>
 ```
 
-Approval gates are typically used for production deployments where a human must confirm before the deploy step executes.
+`POST /pipeline-runs/{run_id}/approve` records the caller as the decider: in the run's inputs as `approved_by` (a job token as `job:<job id>`) and in the audit log. Under the project's `strict` [security profile](/docs/guides/security-profiles) (rule `pipelines.approve_token`), only a person's own token may approve a run; job, service, service-principal and app-link tokens get 403.
+
+An environment's `approval` setting in the manifest is not enforced by Eve: deploys never wait for a person because of it. Remove it; the `strict` profile refuses it at sync.
 
 ## Cancellation
 

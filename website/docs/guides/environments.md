@@ -1,16 +1,16 @@
 ---
 title: Environments & Promotion
-description: Configure deploy targets with overrides, pipeline bindings, approval gates, and promotion workflows.
+description: Configure deploy targets with overrides, pipeline bindings, and promotion workflows.
 sidebar_position: 4
 ---
 
 # Environments & Promotion
 
-Environments are named deploy targets — staging, production, preview — each with its own service overrides, pipeline bindings, and approval policies. Eve treats environments as first-class manifest objects so that every deploy follows a repeatable, auditable path from code to production.
+Environments are named deploy targets — staging, production, preview — each with its own service overrides and pipeline bindings. Eve treats environments as first-class manifest objects so that every deploy follows a repeatable, auditable path from code to production.
 
 ## Defining environments in the manifest
 
-Environments live under the `environments` key in `.eve/manifest.yaml`. Each entry names a deploy target and optionally binds it to a pipeline, sets approval policy, and provides service overrides.
+Environments live under the `environments` key in `.eve/manifest.yaml`. Each entry names a deploy target and optionally binds it to a pipeline and provides service overrides.
 
 ```yaml
 environments:
@@ -25,7 +25,6 @@ environments:
     kind: standard
   production:
     pipeline: deploy
-    approval: required
     type: persistent
     kind: standard
     labels: [stable]
@@ -35,7 +34,7 @@ environments:
 |-------|-------------|
 | `pipeline` | Pipeline to run when deploying to this environment |
 | `pipeline_inputs` | Default inputs passed to the pipeline run |
-| `approval` | Set to `required` to gate deploy and job steps |
+| `approval` | **Not enforced by Eve.** Remove it (see [Environment approval](#environment-approval)) |
 | `overrides` | Compose-style service overrides for this environment |
 | `type` | `persistent` or `temporary` |
 | `kind` | `standard` or `preview` |
@@ -61,7 +60,6 @@ environments:
             FEATURE_FLAGS: '{"beta_ui": true}'
   production:
     pipeline: deploy
-    approval: required
     overrides:
       services:
         api:
@@ -141,31 +139,19 @@ eve env deploy staging \
 
 In this example, `smoke_test` is overridden to `false` while `timeout` keeps the manifest default of `1800`.
 
-## Approval gates
+## Environment approval
 
-Setting `approval: required` on an environment prevents deploy and job steps from executing until an authorized user explicitly approves the pipeline run.
+Eve does not gate deploys on an environment's `approval` setting: deploys to an environment never wait for a person, whatever `environments.<env>.approval` says. Remove the key from your manifest.
 
-```yaml
-environments:
-  production:
-    pipeline: deploy
-    approval: required
-```
+- Under the `audit` and `legacy` [security profiles](./security-profiles.md), manifest sync accepts the key with a warning: `Environment approval gates are not enforced by Eve. Remove approval from environments.<env>.`
+- Under `strict`, sync refuses (400) any value that asks for a gate. `none` (in any case) and a blank value pass.
 
-When a pipeline run reaches an approval-gated environment, it pauses and waits for explicit approval:
+Pipeline runs can still be approved or cancelled from the CLI. Approving records who approved the run, and under the `strict` profile only a person's own token may approve:
 
 ```bash
-# Check pending runs
-eve pipeline runs my-pipeline --status pending_approval
-
-# Approve
 eve pipeline approve <run-id>
-
-# Or cancel
 eve pipeline cancel <run-id> --reason "Blocking bug found in staging"
 ```
-
-Approval gates are the safety net for production deployments. They ensure that a human reviews the pipeline state before changes reach end users.
 
 ## Direct deploy vs. pipeline deploy
 
@@ -203,8 +189,6 @@ sequenceDiagram
     Note over Staging: skip build → deploy release
 
     Dev->>Prod: eve env deploy production --ref <sha><br/>--inputs '{"release_id":"rel_xxx"}'
-    Note over Prod: approval gate
-    Dev->>Prod: eve pipeline approve <run-id>
     Note over Prod: deploy release
 ```
 
@@ -244,7 +228,7 @@ eve env deploy production \
   --inputs '{"release_id":"rel_xxx"}'
 ```
 
-Production has `approval: required`, so the pipeline run pauses until you approve it. After approval, the same release is deployed — the exact same image digests that ran in test and staging.
+The same release is deployed to production — the exact same image digests that ran in test and staging.
 
 ## Release resolution
 
