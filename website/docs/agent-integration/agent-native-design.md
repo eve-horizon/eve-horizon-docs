@@ -144,6 +144,9 @@ services:
       context: ./apps/coordinator
     ports: [3000]
     x-eve:
+      ingress:
+        public: true        # declare ingress explicitly on every service with ports
+        port: 3000
       api_spec:
         type: openapi
         spec_url: /openapi.json
@@ -255,6 +258,8 @@ services:
       context: ./apps/api
     ports: [3000]
     x-eve:
+      ingress:
+        public: false       # agent CLIs call the in-cluster URL; use true if browsers call it too
       api_spec:
         type: openapi
       cli:

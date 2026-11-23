@@ -591,6 +591,38 @@ code --ask-for-approval on-request --model <model> \
   --profile <variant> exec --json --skip-git-repo-check "<prompt>"
 ```
 
+## Harnesses under the strict profile
+
+When a project runs under the `strict` [security profile](/docs/guides/security-profiles), harness execution changes in these ways.
+
+### Runner pods
+
+Agent jobs, `script:` steps and `action: { type: run }` run only in runner pods that hold no platform credential, never inline in the agent runtime or the worker process. A legacy pipeline-runner `run` step gets 400 ("use a `script:` step"), and outside Kubernetes such work fails ("strict needs runner pods"). Runner pods mount no org filesystem. Before a runner uses its job token, it checks that the cloud metadata server and the Kubernetes API are out of reach; if either answers, the job fails with "egress policy not enforced".
+
+### Harness selection and credentials
+
+- An agent job with no harness named, no `x-eve.defaults.harness_preference` and no instance preference fails at dispatch ("no harness configured").
+- A harness credential counts only from project, org, system or job-actor secrets. Harness preferences skip a harness without one; a named harness without one fails at dispatch.
+- A harness profile that is not declared, or cannot be read, fails manifest sync, agents sync and dispatch. A workflow step naming an agent that does not exist fails agents sync and workflow invoke.
+- Runner pods reach the model APIs of the harnesses the project can run: those its harness profiles name, else those its secrets are credentials for. A job naming another harness gets no route to its API, so declare a profile for every harness your agents use. Other hosts go in `x-eve.egress.hosts`.
+
+### Reserved environment names
+
+Env overrides may not set the code-loading names `LD_PRELOAD`, `LD_LIBRARY_PATH`, `DYLD_*`, `BASH_ENV`, `ENV`, `PYTHONPATH` and `PYTHONSTARTUP`, and may set `SSL_CERT_DIR`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE` only to a single `${secret.KEY}`. Job create, chat hints, workflow invoke and manifest sync refuse them. On every profile, `EVE_*`, `PATH`, `HOME`, `NODE_OPTIONS` and model provider credentials cannot be overridden, and model routing names (such as `*_BASE_URL` and proxies) take only a single `${secret.KEY}` from the project or org.
+
+### Checkout settings
+
+A harness reads settings from the job's checkout as well as from Eve. Under `strict`, a run is refused, naming the file and setting (never a value), when the checkout's settings reroute model traffic or hand a credential to a place the checkout names:
+
+| Harness | Refused |
+|---------|---------|
+| `claude`, `mclaude`, `zai` | A config directory inside the checkout whose `settings.json` sets a routing name or `apiKeyHelper`; an MCP server in `.mcp.json` or the config directory's `.claude.json` that names a credential or routing variable; any of these files that cannot be parsed |
+| `codex` | A `.codex/config.toml`, or a `config.toml` in a config home inside the checkout, that sets the top-level `profile`, `model_provider`, a `model_providers` entry, any `*base_url`, or an env override with a routing name; an MCP server handed a credential or routing variable, or an `auth` other than `oauth`; any `.env` in a config home inside the checkout; a config that cannot be parsed |
+| `gemini` | Routing names in `.gemini/.env`; a `$NAME` or `${NAME}` reference to a credential or routing name in `.gemini/settings.json`; a settings file that does not parse |
+| `code`, `pi` | Always |
+
+Routing names are `*_BASE_URL`, `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, TLS trust settings such as `NODE_EXTRA_CA_CERTS`, `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `NODE_OPTIONS` and the code-loading names. The credentials an MCP server may not be handed are the running harness's own API key or auth names and Eve's secret-bearing names (such as `EVE_JOB_TOKEN` and app-link tokens). Another harness's key and Eve's plain settings (`EVE_API_URL`, `EVE_PROJECT_ID`) are allowed. Eve never edits a checkout file: remove the refused setting from your repository.
+
 ## Execution logging
 
 All harness output is logged to the `execution_logs` table with typed entries:

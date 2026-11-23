@@ -54,6 +54,7 @@ services:
 | `engine` | Yes | Database engine (currently `postgres`) |
 | `engine_version` | No | Engine version (e.g., `"16"`) |
 | `extensions` | No | Postgres extensions to preload before app migrations |
+| `roles` | No | Least-privilege logins for app services (see [Declared roles](#declared-roles)) |
 
 ### Extensions and TLS trust
 
@@ -97,19 +98,69 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
   api:
     build:
       context: ./apps/api
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}
     depends_on:
       db:
         condition: service_healthy
+    x-eve:
+      ingress:
+        public: true
+        port: 3000
 ```
 
 The `${managed.<service>.<field>}` syntax resolves to the provisioned values when the environment is deployed. Use `eve db status` to confirm tenant readiness before relying on managed values.
+
+| Placeholder | Value |
+|-------------|-------|
+| `${managed.db.url}` | Owner connection URL |
+| `${managed.db.host}`, `.port`, `.database`, `.username`, `.password` | Parts of the owner credential |
+| `${managed.db.roles.<name>.url}` | Connection URL for a declared role |
+| `${managed.db.roles.<name>.username}`, `.password` | Role login and password |
+
+### Declared roles
+
+Every managed database has one owner login. Declare extra least-privilege logins for app services with `roles`:
+
+```yaml
+roles:
+  - name: app
+    grants: readwrite                      # SELECT, INSERT, UPDATE, DELETE in public
+  - name: reports
+    grants: readonly                       # SELECT in public
+  - name: auth
+    grants: { schema: auth, owner: true }  # owns the auth schema (from 0.1.330)
+```
+
+- `readwrite` and `readonly` cover tables and sequences in `public`, including ones the owner creates later, but cannot create objects. Run migrations with the owner URL in a `role: job` service.
+- A schema-owner role suits a component that runs its own migrations in its own schema, such as an auth server. It can create, change and drop objects in that schema and gets no grants of its own in `public`. The other roles get nothing in its schema; the owner can read it, so snapshots include it. The schema name is a plain lower-case identifier, never `public`, `pg_*` or `information_schema`, with one owner role.
+- A schema that already exists and is owned by the database owner is handed over to the role, with its objects, at the next deploy. Removing the role from the manifest hands the schema back to the owner before the login is dropped.
+- Role names match `^[a-z][a-z0-9_]{0,15}$`, and a database declares at most 8 roles. Roles added later are created on the next deploy; removed roles are revoked and dropped.
+- `eve db rotate-credentials` rotates every role's password with the owner's, `eve db destroy` drops the roles, and `eve db reset` resets `public` only, so an owned schema is kept.
+- `eve db status --env <env>` lists declared and provisioned roles (names and logins, never passwords).
+- Roles need the local managed database provider.
+
+:::warning Owner URL under the strict profile
+Under the `strict` [security profile](/docs/guides/security-profiles), a long-running service whose `environment`, `command` or `entrypoint` reads `${managed.<db>.url}` or `${managed.<db>.password}` is refused at deploy, naming the declared-role form `${managed.<db>.roles.<role>.url}`. Job services (`x-eve.role: job`, such as migrations) still receive the owner credential, and the non-secret parts (`host`, `port`, `database`, `username`) are unaffected.
+:::
+
+### Connection limits
+
+On every security profile:
+
+- Each managed database accepts only its own logins.
+- Each login (the owner and each role) gets its class's connection limit unless it already has one: 25 for `db.p1`, 100 for `db.p2` and 200 for `db.p3`. A limit an operator set on a login is never changed.
+- The database as a whole gets its class maximum plus 5 connections reserved for Eve's own work (30, 105 or 205). This is set only when the database has no limit, so a limit an operator set, lower or higher, is kept.
+
+Size each service's connection pool within its login's limit. When a login or the database runs near its limit, scale to a larger class with `eve db scale`.
 
 ## Database status and credentials
 
@@ -131,7 +182,7 @@ Rotate database credentials when needed for security compliance:
 eve db rotate-credentials --env staging
 ```
 
-After rotation, redeploy services that reference managed database values so they pick up the new credentials.
+After rotation, redeploy services that reference managed database values so they pick up the new credentials. Rotation covers the owner and every declared role.
 
 ## Migrations
 
@@ -208,10 +259,13 @@ services:
   migrate:
     image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.url}     # owner URL: allowed in job services
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
+      security:                           # the migrate image sets no USER; the strict profile needs a numeric one
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations

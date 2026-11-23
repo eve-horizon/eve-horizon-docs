@@ -177,10 +177,12 @@ Every service can include an `x-eve` block (also accepted as `x_eve`) for Eve-sp
 | `files` | Mount repository files into the container |
 | `storage` | Persistent volume configuration |
 | `managed` | Managed DB config (requires `role: managed_db`) |
+| `security` | How the service runs under the `strict` profile: `{ run_as_user, run_as_group, run_as_root, capabilities }` |
+| `egress` | Internet hosts this service's pods may reach under `strict`: `{ hosts: [...] }` |
 
 ### Ingress
 
-If a service exposes ports and your environment has a domain, Eve creates public ingress by default. You can explicitly control this:
+A service is public only when it declares `x-eve.ingress.public: true`. Declare ingress explicitly on **every** service that lists `ports`:
 
 ```yaml
 x-eve:
@@ -190,7 +192,46 @@ x-eve:
     alias: my-api    # Optional custom subdomain (3-63 chars, lowercase alphanumeric + hyphens)
 ```
 
-Set `public: false` to disable ingress for a service that exposes ports.
+Use `public: false` for internal services that other services reach inside the environment.
+
+:::warning
+A service with `ports` and no `x-eve.ingress` block is public under the `audit` [security profile](./security-profiles.md) but private under `strict`: it gets no Ingress, and the ingress controller cannot reach it. A routed service that relies on that default becomes unreachable from outside when its project moves to `strict`.
+:::
+
+### Pod security (`x-eve.security`)
+
+Under the `strict` profile, every service and job service runs as a **numeric** non-root user with the restricted Pod Security context. Eve reads the user from the image's numeric `USER` (for example `USER 1000:1000` in the Dockerfile). When the image's `USER` is a name, root or unset, set it in the manifest:
+
+```yaml
+x-eve:
+  security:
+    run_as_user: 1000
+    run_as_group: 1000
+    # capabilities: [NET_BIND_SERVICE]   # only to bind a port below 1024 as non-root
+    # run_as_root: true                  # opt-out
+```
+
+Allowed `capabilities` are `NET_BIND_SERVICE`, `CHOWN`, `SETUID`, `SETGID` and `DAC_OVERRIDE`. Under `audit` these fields change nothing. See [Security Profiles](./security-profiles.md#run-as-a-numeric-non-root-user).
+
+### Egress hosts (`x-eve.egress.hosts`)
+
+Under the `strict` profile, a project's pods reach only the internet hosts it declares. List them at project level (every pod and job runner) or on a service (that service's pods only):
+
+```yaml
+x-eve:
+  egress:
+    hosts:
+      - api.example.com
+      - { name: smtp.example.com, port: 587 }
+
+services:
+  web:
+    x-eve:
+      egress:
+        hosts: [payments.example.com]
+```
+
+Job runners also reach their harness model APIs and the repository's git host without an entry. Run `eve project sync` after changing hosts. See [Security Profiles](./security-profiles.md#declare-the-internet-hosts-you-call).
 
 ### API spec registration
 
@@ -383,6 +424,9 @@ services:
         class: db.p1        # Tier: db.p1, db.p2, db.p3
         engine: postgres
         engine_version: "16"
+        roles:              # Optional least-privilege logins for app services
+          - name: app
+            grants: readwrite
 ```
 
 Managed database services are **not** deployed to Kubernetes. Instead, Eve provisions a database tenant when you deploy an environment for the first time. Key points:
@@ -392,7 +436,7 @@ Managed database services are **not** deployed to Kubernetes. Instead, Eve provi
 - **Scaling** is handled with [eve db](/docs/reference/cli-appendix#eve-db) commands
 - **Status** can be checked with [eve db](/docs/reference/cli-appendix#eve-db) commands
 
-Other services can reference managed database values using `${managed.<service>.<field>}` placeholders, which are resolved at deploy time.
+Other services can reference managed database values using `${managed.<service>.<field>}` placeholders, which are resolved at deploy time. Long-running services should connect as a declared role (`${managed.db.roles.app.url}`); keep the owner URL (`${managed.db.url}`) for migration jobs. Under the `strict` profile a long-running service that reads the owner URL or password is refused at deploy. See [Services & Databases](./services-and-databases.md).
 
 ## Default job settings (`x-eve.defaults`)
 
@@ -511,6 +555,8 @@ eve manifest validate --validate-secrets
 eve manifest validate --strict    # Fail on missing secrets
 ```
 
+The `--strict` flag only concerns missing secrets. It is unrelated to the `strict` [security profile](./security-profiles.md).
+
 The validator checks:
 
 - Schema conformance against the Zod-based manifest schema
@@ -557,14 +603,17 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
   api:
     build:
-      context: ./apps/api
+      context: ./apps/api        # Dockerfile sets a numeric USER, e.g. USER 1000:1000
     image: acme-api
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}   # declared role, not the owner URL
       NODE_ENV: production
     depends_on:
       db:
@@ -584,19 +633,22 @@ services:
     build:
       context: ./apps/web
     image: acme-web
-    ports: [80]
+    ports: [8080]                # a non-root web server listens on a port >= 1024
     x-eve:
       ingress:
         public: true
-        port: 80
+        port: 8080
 
   migrate:
     image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.url}   # owner URL: job services only
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
+      security:                  # the migrate image sets no USER; strict needs a numeric one
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -609,7 +661,6 @@ environments:
     pipeline: deploy
   production:
     pipeline: deploy
-    approval: required
 
 pipelines:
   deploy:
@@ -637,6 +688,9 @@ services:
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
+      security:                  # needed under the strict profile: the image sets no USER
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -668,4 +722,5 @@ External services are not deployed by Eve. They exist in the manifest so other s
 - Deep-dive into service configuration: [Services & Databases](./services-and-databases.md)
 - Set up your build pipeline: [Pipelines & CI/CD](./pipelines.md)
 - See the full schema reference: [Manifest Schema](/docs/reference/manifest-schema)
+- Make the manifest ready for the `strict` profile: [Security Profiles](./security-profiles.md)
 - Validate from the CLI: [eve manifest validate](/docs/reference/cli-appendix#eve-manifest-validate)

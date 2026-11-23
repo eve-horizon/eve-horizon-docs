@@ -467,6 +467,26 @@ function App() {
 </EveLoginGate>
 ```
 
+### App audience tokens (strict instance profile)
+
+When the instance runs under the `strict` [security profile](./security-profiles.md), the SSO's `/session` serves an app only from one of its own project's `https` hosts (environment default hosts, ingress aliases, verified custom domains and `x-eve.auth.allowed_redirect_origins`), only for people the app's access policy admits, and returns an **app audience token** instead of the platform token:
+
+- `aud` is `eve-app:<project_id>:<env>`, or `eve-app:<project_id>` when the origin names no environment.
+- It has no `orgs` claim: the SDK middleware reads the person's organizations from Eve's `/auth/app-access`.
+- It lasts one hour: on a 401, ask `/session` again.
+
+Eve's API accepts the token only on `/auth/me`, `/auth/app-access`, `/auth/app-invites` and `/auth/token/verify`, with an `X-Eve-Audience` header equal to the token's `aud`, and only for the app's own project. The SDK sends the header for you; an app calling those routes without the SDK adds it itself:
+
+```typescript
+import { eveAudienceHeaders } from '@eve-horizon/auth';
+
+await fetch(`${process.env.EVE_API_URL}/auth/me`, {
+  headers: { Authorization: `Bearer ${token}`, ...eveAudienceHeaders(token) },
+});
+```
+
+Apps on an older SDK find no identity in an app audience token, so upgrade `@eve-horizon/auth` before the instance moves to `strict`. Under `audit`, apps get the platform token as before.
+
 ### App-branded login and invites
 
 Deployed apps can opt into project-branded auth flows with `x-eve.auth` and `x-eve.branding` in the manifest:

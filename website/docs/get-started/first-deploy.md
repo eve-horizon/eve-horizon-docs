@@ -92,13 +92,16 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
   api:
     build:
       context: ./apps/api
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}
     depends_on:
       db:
         condition: service_healthy
@@ -110,20 +113,27 @@ services:
   web:
     build:
       context: ./apps/web
-    ports: [80]
+    ports: [8080]
     depends_on:
       api:
         condition: service_healthy
+    x-eve:
+      ingress:
+        public: true
+        port: 8080
 
 environments:
   staging:
     pipeline: deploy
   production:
     pipeline: deploy
-    approval: required
 ```
 
-Services with `role: managed_db` are not deployed as containers — the platform provisions a managed Postgres instance automatically.
+Services with `role: managed_db` are not deployed as containers — the platform provisions a managed Postgres instance automatically. The API connects as the declared `app` role rather than the database owner.
+
+:::tip Declare ingress on every service with ports
+Give every service that lists `ports` an explicit `x-eve.ingress` block, with `public: true` or `public: false`. Without one, a service is public under the `audit` security profile but private under `strict`. If your project runs under `strict`, your images also need a numeric non-root `USER` (for example `USER 1000:1000`), which is why the web server above listens on 8080. See [Security Profiles](/docs/guides/security-profiles).
+:::
 
 ## 2. Validate the manifest
 
@@ -293,6 +303,7 @@ From here, you can explore the platform in depth:
 - [Manifest Authoring](/docs/guides/manifest-authoring) — Service definitions, environment overrides, registry configuration, and advanced manifest patterns.
 - [Pipelines](/docs/guides/pipelines) — Event triggers, step types, promotion flows, and CI/CD patterns.
 - [Skills](/docs/guides/skills) — Writing custom skills, installing skill packs, and the SKILL.md format.
-- [Environments](/docs/guides/environments) — Environment types, approval gates, and PR preview environments.
+- [Environments](/docs/guides/environments) — Environment types, overrides, promotion, and PR preview environments.
+- [Security Profiles](/docs/guides/security-profiles) — What the `strict` profile requires of your app.
 - [Authentication & Identity](/docs/guides/authentication) — Login methods, organizations, roles, and user management.
 - [Secrets & Credentials](/docs/guides/secrets) — Multi-scope secret management, manifest interpolation, and harness credentials.

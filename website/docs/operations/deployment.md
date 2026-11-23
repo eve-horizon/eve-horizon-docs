@@ -57,6 +57,8 @@ Domain resolution follows a priority order:
 
 For local development, Eve uses `lvh.me` which resolves to `127.0.0.1` -- no `/etc/hosts` editing required.
 
+A service gets an Ingress only when it is public. Declare `x-eve.ingress.public: true` on every routed service: under the `strict` [security profile](/docs/guides/security-profiles), a service with ports and no `x-eve.ingress` block is private, and its next deploy removes the Ingress Eve made for it.
+
 HTTP ingresses can be tuned per service with `x-eve.ingress.timeout` and `x-eve.ingress.max_body_size`. On nginx-backed clusters, Eve applies `proxy-read-timeout`, `proxy-send-timeout`, and body-size annotations to the default host, aliases, and custom domains. `eve env diagnose <project> <env> --json` includes `.http_ingress[]` rows showing requested and effective values plus controller support.
 
 Custom domains are owned by exactly one environment at a time. If two environments declare the same hostname, the first binding wins and later deploys skip that hostname with an `ingress_conflict` diagnostic. Use:
@@ -85,6 +87,8 @@ Services that declare `x-eve.tcp_ingress` get a public LoadBalancer service for 
 eve tcp-ingress test <project> <env> --listener a1-gt06
 eve tcp-ingress test <project> <env> --listener a1-gt06 --timeout 10 --json
 ```
+
+Public TCP listeners are not admitted under the `strict` security profile.
 
 ### TLS certificates
 
@@ -215,6 +219,24 @@ Eve automatically injects these environment variables into every deployed servic
 | `EVE_SERVICE_TOKEN` | Scoped service JWT for Eve API calls, refreshed on deploy |
 
 Use `EVE_API_URL` for backend calls from your containers. Use `EVE_PUBLIC_API_URL` for browser or client-side code. Use `EVE_SSO_URL` with `@eve/auth` and `@eve/auth-react` when adding app login.
+
+### Service secrets
+
+Credentials never sit in a Deployment or Job spec, on every security profile. At each deploy, Eve writes one Kubernetes Secret per service, `<env>-<service>-eve-secrets`, holding every `environment` value that references `${secret.KEY}` or `${managed.*}`, plus `EVE_SERVICE_TOKEN` and app-link tokens. Containers read them through `secretKeyRef` under the same variable names, so your app sees no change; plain values stay inline.
+
+- A changed secret value rolls the pods at the next deploy.
+- Job services (such as migrations) read their values from a Secret made for the run and removed when it ends.
+
+## Deploying under the strict profile
+
+When a project runs under the `strict` [security profile](/docs/guides/security-profiles), the deployer checks more before it applies anything:
+
+- **Pod Security.** Tenant pods and job service pods run with the restricted Pod Security context and a numeric non-root user, from `x-eve.security.run_as_user` or the image's numeric `USER`. A service with neither is refused before anything is applied, with a message naming the fields. The namespace gets Pod Security `warn` and `audit` labels at `restricted` (or `baseline` after an opt-out such as `run_as_root`), and from rule set 3 `enforce` at that level once the rollout succeeds.
+- **Egress policies.** The deployer writes the namespace's network policies before any workload starts; under `strict` a failure to write them fails the deploy. With host allow lists (rule set 3), the instance needs an egress provider, or deploys fail with "egress allow lists need a provider (EVE_EGRESS_FQDN_PROVIDER)".
+- **Ingress isolation.** From rule set 3, pods accept connections only from the Eve API, the project's own namespaces and job runners, the ingress controller on a routed service's port, and app-link consumers with a live grant.
+- **Managed database credentials.** From rule set 3, a long-running service that reads the database owner's URL or password is refused; use a declared role.
+
+Under `audit` the same checks only record findings. A system admin can see them with `eve doctor security --project <id>` and can move a project back to `audit` at once if a fix needs platform work.
 
 ## Zero-downtime deployments
 
@@ -486,6 +508,9 @@ eve system logs worker
 | `ingress_conflict` | Another environment owns a hostname | `eve domain list`, then `eve domain transfer` or `eve domain unbind` |
 | `readiness_timeout` | Pods deployed but readiness probes did not pass | `eve env diagnose`, then inspect pod and service logs |
 | `dependency_timeout` | A dependency service did not become healthy | `eve env logs <dependency>` and healthcheck settings |
+| Refused, naming `x-eve.security.run_as_user` | Under `strict`, the image `USER` is a name, root or unset | Set a numeric `USER` in the Dockerfile, or `x-eve.security.run_as_user` |
+| Refused, naming `${managed.<db>.roles.<role>.url}` | Under `strict`, a long-running service reads the owner URL | Declare a database role and use its URL |
+| `egress allow lists need a provider (EVE_EGRESS_FQDN_PROVIDER)` | The instance has no egress provider for a `strict` project | Platform operator configures one; keep the project on `audit` until then |
 
 ## Workspace janitor
 

@@ -40,7 +40,7 @@ eve secrets set GITHUB_TOKEN "ghp_xxx" --scope org --org org_xxx
 # List keys (values are never shown)
 eve secrets list --project proj_xxx
 
-# Show a masked value (first/last characters only)
+# Show a fixed mask, the value's length and a fingerprint (never any character of the value)
 eve secrets show API_KEY --project proj_xxx
 
 # Delete a secret
@@ -151,7 +151,7 @@ eve project sync --validate-secrets
 eve project sync --strict
 ```
 
-Validation reports missing secrets with scope-aware remediation hints, such as `eve secrets set KEY value --scope project --project proj_xxx`.
+Validation reports missing secrets with scope-aware remediation hints, such as `eve secrets set KEY value --scope project --project proj_xxx`. The `--strict` flag is unrelated to the `strict` [security profile](./security-profiles.md).
 
 ## Safe secrets (ensure and export)
 
@@ -166,7 +166,7 @@ eve secrets export --project proj_xxx --keys GITHUB_WEBHOOK_SECRET
 ```
 
 :::caution
-`eve secrets export` returns the plaintext value. Treat it as sensitive.
+`eve secrets export` returns the plaintext value. Treat it as sensitive. Under the `strict` security profile, export is refused (403): `ensure` shows a value it generates once, in its own response, and `eve github setup` returns the webhook secret only when it creates it (or with `--regenerate`).
 :::
 
 ## Worker secret injection
@@ -180,6 +180,22 @@ For Git authentication:
 
 Missing auth surfaces explicit errors with remediation hints.
 
+On every security profile, `environment` values that reference `${secret.KEY}` or `${managed.*}` reach a deployed service through its own Kubernetes Secret (`<env>-<service>-eve-secrets`) and `secretKeyRef`, never inline in the pod spec. The container sees the same variable names and values.
+
+## Secrets under the strict profile
+
+When a project runs under the `strict` [security profile](./security-profiles.md):
+
+| What changes | What to do |
+|--------------|------------|
+| Secret values are write-only: `eve secrets export` gets 403 | Capture a generated value from the `ensure` response, or rotate it and set it where it is needed |
+| A system secret reaches the project only when the instance shares it by name (`secrets.system_shared_keys`) | Ask a system admin to share it, or set it at org or project scope |
+| A job may update only a project-scope copy of a credential it refreshes, never the org's | Keep a project-scope copy of such credentials, for example `CODEX_AUTH_JSON_B64` |
+| A job whose agent (`access.secrets`) and workflow step (`secrets:`) declare no allowlist gets only its harness provider keys and the keys its env overrides reference | Declare the secrets each job needs |
+| Starting work bound to secrets beyond the harness credential needs `secrets:use` | Grant `secrets:use` through a custom role or binding |
+| A GitHub webhook for a project without its own `GITHUB_WEBHOOK_SECRET` gets 401 | Run `eve github setup` for the project |
+| User-scope secrets named like routing settings (`*_BASE_URL`, proxies, TLS trust) or code-loading names are left out of jobs | Set those values at project or org scope |
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -192,3 +208,4 @@ Missing auth surfaces explicit errors with remediation hints.
 
 - **[Authentication & Identity](./authentication.md)** — login methods, organizations, roles, and user management.
 - **[Security & Key Rotation](/docs/operations/security)** — JWT key rotation, incident response, and production hardening.
+- **[Security Profiles](./security-profiles.md)** — what the `strict` profile requires of your app.

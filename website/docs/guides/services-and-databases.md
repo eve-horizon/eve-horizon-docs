@@ -21,6 +21,10 @@ services:
     ports: [3000]
     environment:
       NODE_ENV: production
+    x-eve:
+      ingress:
+        public: true      # declare ingress on every service with ports
+        port: 3000
 ```
 
 When both `build` and `image` are present, Eve builds the image from the context and pushes it to the registry using the `image` value as the tag. When only `image` is present, Eve pulls the image directly.
@@ -67,7 +71,11 @@ ports: ["3000:3000"]     # host:container mapping
 ports: [3000, 8080]      # Multiple ports
 ```
 
-When a service exposes ports and the environment has a domain configured, Eve creates ingress routing by default. Control this with the `x-eve.ingress` block.
+Declare an `x-eve.ingress` block on every service that lists ports: `public: true` for services reached from outside, `public: false` for internal ones.
+
+:::warning
+A service with ports and no `x-eve.ingress` block is public under the `audit` [security profile](./security-profiles.md) but private under `strict`, where it gets no Ingress and the ingress controller cannot reach it. Do not rely on the default.
+:::
 
 ### HTTP ingress tuning
 
@@ -98,6 +106,8 @@ services:
   device-edge:
     ports: [33400, 33500]
     x-eve:
+      ingress:
+        public: false      # no HTTP ingress for a raw TCP service
       tcp_ingress:
         listeners:
           - name: a1-gt06
@@ -107,6 +117,8 @@ services:
 ```
 
 The deployer keeps the normal ClusterIP service for in-cluster traffic and creates a sibling public LoadBalancer service for the TCP listeners. `eve env diagnose` reports listener state, host, provider, and port; `eve tcp-ingress test <project> <env> --listener <name>` opens a TCP probe from your machine.
+
+Public TCP listeners are not admitted under the `strict` [security profile](./security-profiles.md#cross-project-traffic-and-ingress-isolation), because they reach the pods through a load balancer rather than the ingress controller.
 
 ## Health checks
 
@@ -203,6 +215,8 @@ services:
     ports: [3000]
     x-eve:
       role: component   # Optional — this is the default
+      ingress:
+        public: false   # internal; use true for services reached from outside
 ```
 
 ### Worker
@@ -246,10 +260,15 @@ services:
         condition: service_healthy
     x-eve:
       role: job
+      security:              # the migrate image sets no USER; the strict profile needs a numeric one
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
 ```
+
+Job services may use the database owner URL (`${managed.db.url}`); long-running services should use a declared role (see [Database roles](#database-roles)).
 
 Reference job services from pipeline steps using the `job` action type:
 
@@ -277,6 +296,9 @@ services:
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
+      security:              # needed under the strict profile: the image sets no USER
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -347,6 +369,9 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 ```
 
 ### Configuration fields
@@ -356,6 +381,7 @@ services:
 | `class` | Database tier — `db.p1` (small), `db.p2` (medium), `db.p3` (large) |
 | `engine` | Database engine — currently only `postgres` is supported |
 | `engine_version` | Engine version string (e.g., `"16"`) |
+| `roles` | Optional least-privilege logins for app services (see [Database roles](#database-roles)) |
 
 ### Provisioning lifecycle
 
@@ -379,10 +405,44 @@ The platform manages credentials automatically. Other services can reference man
 services:
   api:
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}   # a declared role
+  migrate:
+    environment:
+      DATABASE_URL: ${managed.db.url}             # the owner, for migration jobs
 ```
 
-These placeholders are resolved at deploy time when the managed database is available.
+These placeholders are resolved at deploy time when the managed database is available. `${managed.db.url}` and `${managed.db.password}` are the owner's credential; `host`, `port`, `database` and `username` are also available, and `roles.<name>.url`, `.username` and `.password` for each declared role.
+
+### Database roles
+
+Every managed database has one owner login. `roles` declares extra logins for your app services:
+
+| `grants` | What the role gets |
+|----------|--------------------|
+| `readwrite` | Read and write on tables and sequences in `public`, including tables the owner creates later. Cannot create objects. |
+| `readonly` | Read on the same. Cannot create objects. |
+| `{ schema: <name>, owner: true }` | Owns one schema: it can create, change and drop objects there, and gets no grants of its own in `public` (from 0.1.330). |
+
+```yaml
+roles:
+  - name: app
+    grants: readwrite
+  - name: auth
+    grants: { schema: auth, owner: true }
+```
+
+- Run migrations for `public` as a `role: job` service with the owner URL. Give a component that runs its own migrations in its own schema, such as an auth server, a schema-owner role instead of the owner credential.
+- Role names match `^[a-z][a-z0-9_]{0,15}$`; a database declares at most 8 roles. Roles added later are created on the next deploy, and removed roles are dropped.
+- `eve db rotate-credentials` rotates every role's password with the owner's.
+- Roles need the local managed database provider.
+
+:::warning
+Under the `strict` [security profile](./security-profiles.md), a long-running service whose `environment`, `command` or `entrypoint` reads `${managed.<db>.url}` or `${managed.<db>.password}` is refused at deploy. Use a declared role's URL in long-running services, and keep the owner credential for `role: job` services.
+:::
+
+### Connection limits
+
+Each managed database accepts only its own logins. Each login gets its class's connection limit unless it already has one: 25 for `db.p1`, 100 for `db.p2` and 200 for `db.p3`. Size each service's connection pool within its login's limit, and scale the class with `eve db scale` when you need more. See [Database Operations](/docs/operations/database) for how the database-wide limit works.
 
 ### Managing your database
 
@@ -443,6 +503,8 @@ services:
     image: minio/minio:latest
     ports: [9000]
     x-eve:
+      ingress:
+        public: false
       storage:
         mount_path: /data
         size: 50Gi
@@ -647,6 +709,8 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+    x-eve:
+      ingress: { public: true, port: 3000 }
 
 environments:
   staging:
@@ -659,7 +723,6 @@ environments:
             LOG_LEVEL: debug
   production:
     pipeline: deploy
-    approval: required
 ```
 
 Overrides are merged with the base service configuration at deploy time. Only the specified fields are overridden — unmentioned fields retain their base values. This pattern is especially useful for tuning resource limits, log levels, or feature flags per environment without duplicating your entire service definition.
@@ -677,14 +740,17 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
   api:
     build:
-      context: ./apps/api
+      context: ./apps/api          # Dockerfile sets a numeric USER, e.g. USER 1000:1000
     image: acme-api
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}
       NODE_ENV: production
     depends_on:
       db:
@@ -706,14 +772,14 @@ services:
     build:
       context: ./apps/web
     image: acme-web
-    ports: [80]
+    ports: [8080]                  # a non-root web server listens on a port >= 1024
     depends_on:
       api:
         condition: service_healthy
     x-eve:
       ingress:
         public: true
-        port: 80
+        port: 8080
 
   migrate:
     image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
@@ -725,12 +791,15 @@ services:
         condition: service_healthy
     x-eve:
       role: job
+      security:
+        run_as_user: 1000
+        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
 ```
 
-This configuration gives you a managed Postgres database provisioned by the platform, an API with public ingress and OpenAPI discovery, a web frontend, and a migration job that runs before deployments via pipeline steps. All secrets and managed connection strings are resolved at deploy time.
+This configuration gives you a managed Postgres database provisioned by the platform, an API with public ingress and OpenAPI discovery that connects as a declared role, a web frontend, and a migration job that runs before deployments via pipeline steps. All secrets and managed connection strings are resolved at deploy time, and, with numeric non-root users in the API and web images, the same block deploys under the `strict` [security profile](./security-profiles.md).
 
 ## What's next?
 

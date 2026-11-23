@@ -131,13 +131,17 @@ These rules emerge from how Eve provisions and connects services. Following them
 
 1. **One concern per service.** Separate HTTP serving from background processing. An API service should not also run scheduled jobs. This gives the platform independent scaling and failure isolation.
 
-2. **Use managed DB for Postgres.** Declare `x-eve.role: managed_db` and let the platform provision, connect, and inject credentials. No manual connection strings. Reference the URL with `${managed.db.url}` in other services.
+2. **Use managed DB for Postgres.** Declare `x-eve.role: managed_db` and let the platform provision, connect, and inject credentials. No manual connection strings. Long-running services connect as a declared role (`${managed.db.roles.app.url}`); migration jobs use the owner URL (`${managed.db.url}`).
 
 3. **Mark external services explicitly.** Use `x-eve.external: true` with `x-eve.url` for services hosted outside Eve (Redis, third-party APIs, external databases). This tells the platform not to deploy them but to make their connection information available.
 
 4. **Use `x-eve.role: job` for one-off tasks.** Migrations, seeds, and data backfills are job services, not persistent processes. Mark them with the `job` role so the platform knows they run to completion and exit.
 
-5. **Expose ingress intentionally.** Only services that need external HTTP access get `x-eve.ingress.public: true`. Internal services communicate via cluster networking. Every public endpoint is a security surface.
+5. **Expose ingress intentionally, and always explicitly.** Only services that need external HTTP access get `x-eve.ingress.public: true`; every other service with ports gets `public: false` and is reached via cluster networking. Every public endpoint is a security surface.
+
+:::tip Build for the strict profile
+Projects can move from the `audit` to the `strict` [security profile](./security-profiles.md), which enforces what `audit` only records. A service with ports and no `x-eve.ingress` block is public under `audit` but private under `strict`, so always declare it. Under `strict` images also run as a numeric non-root user, internet hosts are declared in `x-eve.egress.hosts`, long-running services use a declared database role, and cross-project calls go through app links. A manifest built that way runs under both profiles.
+:::
 
 ## Platform-injected environment variables
 
@@ -219,6 +223,8 @@ Use `EVE_API_URL` for all server-side calls (internal cluster networking). Use `
 
 When one Eve app needs to consume another app's API or event stream, model it as an app link instead of exchanging static secrets. The producer exports an API or event feed, the consumer subscribes in its manifest, and Eve mints short-lived link tokens plus `EVE_APP_API_URL_<ALIAS>` environment variables for the selected services or jobs.
 
+Under the producer's `strict` [security profile](./security-profiles.md#cross-project-traffic-and-ingress-isolation), a producer service admits in-cluster connections from another project only through an app link with a live grant for that environment, so route every in-cluster cross-project call through one.
+
 Use the CLI to inspect and validate the link shape:
 
 ```bash
@@ -246,9 +252,12 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 ```
 
-The `class` field controls the managed DB tier — `db.p1`, `db.p2`, or `db.p3` for progressively more resources. Reference the connection URL in other services with `${managed.db.url}`.
+The `class` field controls the managed DB tier — `db.p1`, `db.p2`, or `db.p3` for progressively more resources. Long-running services connect with a declared role's URL (`${managed.db.roles.app.url}`); the owner URL (`${managed.db.url}`) is for migration jobs, and the `strict` profile refuses it in long-running services. See [Database roles](./services-and-databases.md#database-roles).
 
 Use `eve db status --env <env>` to confirm tenant readiness before relying on managed values.
 
@@ -293,7 +302,7 @@ Retrofitting row-level security is painful. Design for it from the start, especi
 
 | Who queries | How | Auth |
 |-------------|-----|------|
-| App service | `${managed.db.url}` in service env | Connection string injected at deploy |
+| App service | `${managed.db.roles.<role>.url}` in service env | Declared role's connection string injected at deploy |
 | Agent via CLI | `eve db sql --env <env>` | Job token scopes access |
 | Agent via RLS | SQL with `app.current_user_id()` | Session context set by runtime |
 
@@ -371,8 +380,9 @@ environments:
     pipeline: deploy
   production:
     pipeline: deploy
-    approval: required
 ```
+
+Eve does not gate deploys on approval: there is no environment `approval` setting to add, and the `strict` profile refuses one in the manifest.
 
 ### Deployment patterns
 
@@ -527,14 +537,17 @@ services:
         class: db.p1
         engine: postgres
         engine_version: "16"
+        roles:
+          - name: app
+            grants: readwrite
 
-  # --- API service (public ingress, connects to managed DB) ---
+  # --- API service (public ingress, connects to managed DB as a declared role) ---
   api:
     build:
-      context: ./apps/api
+      context: ./apps/api        # Dockerfile sets a numeric USER, e.g. USER 1000:1000
     ports: [3000]
     environment:
-      DATABASE_URL: ${managed.db.url}
+      DATABASE_URL: ${managed.db.roles.app.url}
       NODE_ENV: production
     depends_on:
       db:
@@ -550,15 +563,15 @@ services:
   # --- Web frontend (public ingress, talks to API) ---
   web:
     build:
-      context: ./apps/web
-    ports: [80]
+      context: ./apps/web        # non-root web server with a numeric USER
+    ports: [8080]
     environment:
       API_URL: http://${ENV_NAME}-api:3000
       PUBLIC_URL: https://web.${ENV_NAME}.example.com
     x-eve:
       ingress:
         public: true
-        port: 80
+        port: 8080
 
   # --- Migration job (runs on deploy, then exits) ---
   migrate:
@@ -590,7 +603,6 @@ environments:
     pipeline: deploy
   production:
     pipeline: deploy
-    approval: required
 
 # --- Pipelines ---
 pipelines:

@@ -36,6 +36,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    x-eve:
+      ingress:
+        public: false   # internal; declare ingress on every service with ports
 
   api:
     build:
@@ -141,7 +144,7 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 |-------|------|-------------|
 | `role` | `string` | `component` (default), `worker`, `job`, or `managed_db` |
 | `ingress` | `object` | Public routing configuration |
-| `ingress.public` | `boolean` | Enable public ingress (default: `true` when ports are exposed) |
+| `ingress.public` | `boolean` | `true` makes the service public. An `ingress` block without it is private. A service with ports and no `ingress` block is public under the `legacy`/`audit` security profiles and private under `strict`, so always set it. |
 | `ingress.port` | `number` | Port to route traffic to |
 | `ingress.alias` | `string` | Custom subdomain alias (3-63 chars, lowercase alphanumeric + hyphens) |
 | `ingress.domains` | `string[]` | Custom domain names (e.g., `["myapp.com", "www.myapp.com"]`). Max 10 per service. Each gets its own Ingress + TLS cert via HTTP-01. |
@@ -161,6 +164,13 @@ Each service may include an `x-eve` block (or `x_eve` in code) for Eve-specific 
 | `files` | `array<FileMount>` | Mount repo files into the container |
 | `storage` | `object` | Persistent volume configuration |
 | `managed` | `object` | Managed database config (requires `role: managed_db`) |
+| `networking.egress` | `string` | `nat` (default) or `stable`. `stable` is refused under the `strict` security profile. |
+| `security` | `object` | Pod Security settings used under the `strict` profile (see [Pod Security](#pod-security)) |
+| `security.run_as_user` | `number` | Numeric uid the containers run as. Wins over the image's `USER`. |
+| `security.run_as_group` | `number` | Numeric gid. |
+| `security.run_as_root` | `boolean` | Opt-out: run as root; the other controls stay. |
+| `security.capabilities` | `string[]` | Added back after dropping all: `NET_BIND_SERVICE`, `CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`. |
+| `egress.hosts` | `array` | Internet hosts this service's pods may reach under `strict`, beside the project list (see [`x-eve.egress`](#x-eveegress)) |
 
 ### Roles
 
@@ -216,6 +226,8 @@ services:
       - 33400
       - 33500
     x-eve:
+      ingress:
+        public: false      # no HTTP ingress for a raw TCP service
       tcp_ingress:
         listeners:
           - name: a1-gt06
@@ -225,6 +237,32 @@ services:
 ```
 
 `eve env diagnose <project> <env> --json` reports `.tcp_ingress[]`, and `eve tcp-ingress test <project> <env> --listener <name>` opens a TCP probe from the operator machine.
+
+Public TCP listeners are not admitted under the `strict` [security profile](/docs/guides/security-profiles): they reach pods through a load balancer rather than the ingress controller.
+
+### Pod Security
+
+Under the project's `strict` security profile, every service and `role: job` service runs with the restricted Pod Security context (`seccompProfile: RuntimeDefault`, no service account token, no privilege escalation, all capabilities dropped, `runAsNonRoot`) and a numeric user:
+
+- An image with a numeric `USER` (`1000` or `1000:1000`) needs no fields.
+- An image whose `USER` is a name, root or unset, or whose config Eve cannot read, needs `security.run_as_user` (and usually `run_as_group`), or `run_as_root: true`. Otherwise the deploy or job is refused, naming these fields.
+- A non-root process binding a port below 1024 needs `capabilities: [NET_BIND_SERVICE]`.
+- `run_as_root`, or any capability beyond `NET_BIND_SERVICE`, sets the namespace's Pod Security level to `baseline` instead of `restricted`.
+- Unknown fields under `security` fail validation.
+
+```yaml
+services:
+  api:
+    build: { context: ./apps/api }
+    ports: [3000]
+    x-eve:
+      ingress: { public: false }
+      security:
+        run_as_user: 1000
+        run_as_group: 1000
+```
+
+Under `legacy` and `audit` these fields change nothing.
 
 ### App Object Buckets
 
@@ -277,11 +315,15 @@ services:
         class: db.p1          # tier: db.p1, db.p2, db.p3
         engine: postgres       # only postgres currently supported
         engine_version: "16"
+        roles:                 # optional least-privilege logins
+          - name: app          # ^[a-z][a-z0-9_]{0,15}$, unique per database
+            grants: readwrite  # readwrite | readonly | { schema: <name>, owner: true }
 ```
 
 - Provisioning happens on first deploy for an environment.
 - Use `eve db status --env <name>` to view provisioning state.
 - Other services reference managed values with `${managed.<service>.<field>}` placeholders (resolved at deploy time).
+- `roles` declares at most 8 logins. `readwrite` and `readonly` get grants in `public` and cannot create objects. `{ schema: <name>, owner: true }` (from 0.1.330) owns one schema, for a component that migrates its own schema. Roles need the local managed database provider.
 
 ---
 
@@ -296,7 +338,6 @@ environments:
     pipeline_inputs:
       smoke_test: true
       timeout: 1800
-    approval: required
     overrides:
       services:
         api:
@@ -312,7 +353,7 @@ environments:
 |-------|------|-------------|
 | `pipeline` | `string` | Pipeline to run when deploying this environment |
 | `pipeline_inputs` | `map<string, any>` | Default inputs for the pipeline run (merged with CLI `--inputs`, CLI wins) |
-| `approval` | `string` | Set to `required` to gate deploy and job steps |
+| `approval` | `string` | **Not enforced by Eve**: deploys never wait for a person. Remove it. Under the `strict` security profile, sync refuses (400) any value other than `none` or blank; otherwise it warns. |
 | `type` | `string` | Environment lifecycle: `persistent` or `temporary` |
 | `kind` | `string` | Environment taxonomy: `standard` or `preview` |
 | `labels` | `array<string>` | Metadata labels for filtering and UIs |
@@ -342,7 +383,6 @@ environments:
       smoke_test: true
   production:
     pipeline: deploy
-    approval: required
 ```
 
 ```bash
@@ -353,7 +393,7 @@ eve env deploy test --ref <sha>
 eve release resolve v1.2.3
 eve env deploy staging --ref <sha> --inputs '{"release_id":"rel_xxx"}'
 
-# Promote to production (approval gate)
+# Promote to production (same release)
 eve env deploy production --ref <sha> --inputs '{"release_id":"rel_xxx"}'
 ```
 
@@ -737,6 +777,37 @@ eve project sync --strict               # fail on missing secrets
 eve manifest validate                   # pre-flight check without syncing
 ```
 
+The `--strict` flag concerns missing secrets only; it is unrelated to the `strict` security profile.
+
+---
+
+## `x-eve.egress`
+
+The internet hosts a project's pods may reach when the project runs under the `strict` [security profile](/docs/guides/security-profiles) (rule `egress.allow_hosts`). The project-level list covers every pod in the project's environments and its job runners; a service-level list (`services.<name>.x-eve.egress.hosts`) adds hosts for that service's pods only.
+
+```yaml
+x-eve:
+  egress:
+    hosts:
+      - api.example.com              # one host, port 443
+      - "*.cdn.example.com"          # any one label under cdn.example.com
+      - { name: smtp.example.com, port: 587 }
+      - { pattern: "*.hooks.example.com", port: 8443 }
+```
+
+| Entry form | Meaning |
+|------------|---------|
+| `host.example.com` | One host name, TCP port 443 |
+| `"*.example.com"` | Any single label under `example.com` (not `a.b.example.com` or `example.com`) |
+| `{ name, port }` | One host on the given TCP port |
+| `{ pattern, port }` | A `*.` pattern on the given TCP port |
+
+- At most 50 entries per list.
+- Refused at sync: schemes (`https://`), paths, ports inside the string, a bare `*`, a `*` outside the first label, patterns over a top-level domain (`*.com`), IP addresses, single-label and cluster names (`*.svc`, `*.cluster.local`, `*.internal`), wildcard DNS services (`nip.io`, `sslip.io`, `xip.io`, `localtest.me`), and names that resolve to a private, CGNAT, link-local, loopback or other reserved address.
+- Job runners also reach the model APIs of the harnesses the project can run and the repository's git host without an entry; apps do not.
+- Runners read the project list from the last explicit `eve project sync`. Run it after changing hosts; redeploy for services.
+- Under `legacy` and `audit` nothing is blocked.
+
 ---
 
 ## Platform-Injected Environment Variables
@@ -803,10 +874,18 @@ When a service depends on a managed database, reference provisioned values with 
 
 ```yaml
 environment:
-  DATABASE_URL: ${managed.db.url}
+  DATABASE_URL: ${managed.db.roles.app.url}
 ```
 
-These placeholders are resolved at deploy time once the managed database is provisioned.
+| Placeholder | Value |
+|-------------|-------|
+| `${managed.<db>.url}` | Owner connection URL |
+| `${managed.<db>.host}`, `.port`, `.database`, `.username`, `.password` | Parts of the owner credential |
+| `${managed.<db>.extensions}` | Comma-separated declared extensions |
+| `${managed.<db>.roles.<name>.url}` | Connection URL for a declared role |
+| `${managed.<db>.roles.<name>.username}`, `.password` | Role login and password |
+
+These placeholders are resolved at deploy time once the managed database is provisioned. Under the `strict` security profile, a long-running service whose `environment`, `command` or `entrypoint` reads `${managed.<db>.url}` or `${managed.<db>.password}` is refused at deploy; use a declared role. Job services (`role: job`) may still use the owner credential.
 
 ---
 
@@ -816,3 +895,4 @@ These placeholders are resolved at deploy time once the managed database is prov
 - [Job API](/docs/reference/job-api) -- how `x-eve.defaults` merges into job creation
 - [Pipelines](/docs/reference/pipelines) -- pipeline execution details
 - [Workflows](/docs/reference/workflows) -- workflow invocation patterns
+- [Security Profiles](/docs/guides/security-profiles) -- what the `strict` profile requires of a manifest
