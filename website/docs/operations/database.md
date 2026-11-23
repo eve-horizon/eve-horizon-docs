@@ -186,7 +186,7 @@ After rotation, redeploy services that reference managed database values so they
 
 ## Migrations
 
-Eve ships a purpose-built migration container image, `public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest`, for database migrations.
+Eve ships a purpose-built migration container image with each platform release, `ghcr.io/eve-horizon/eve-horizon/migrate:<version>` (for example `0.1.332`), for database migrations. It is signed like the platform images and runs as a numeric non-root user. Pin the version of the platform you run.
 
 ### Creating a new migration
 
@@ -257,15 +257,12 @@ For automated workflows, you can run migrations as a pipeline step using a servi
 ```yaml
 services:
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}     # owner URL: allowed in job services
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
-      security:                           # the migrate image sets no USER; the strict profile needs a numeric one
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -312,7 +309,7 @@ For local compose stacks:
 ```bash
 # docker-compose.yml
 migrate:
-  image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+  image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
   environment:
     DATABASE_URL: postgres://app:app@db:5432/myapp
   volumes:

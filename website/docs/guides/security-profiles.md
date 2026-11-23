@@ -160,7 +160,7 @@ services:
 - `run_as_root`, or any capability beyond `NET_BIND_SERVICE`, puts the namespace at Pod Security level `baseline` instead of `restricted`.
 - Unknown fields under `x-eve.security` fail manifest validation.
 - Stable egress (`x-eve.networking.egress: stable`) is refused under `strict`.
-- Check images you do not build too. Eve's migrate image sets no `USER`, so a migration service that uses it needs `run_as_user` and `run_as_group`.
+- Check images you do not build too. Eve's migrate image (from 0.1.332) runs as `USER 1000:1000` and needs no override; for any other image without a numeric `USER`, set `run_as_user` and `run_as_group`.
 
 The stock nginx image runs as root on port 80. Either use an nginx image that runs as a numeric non-root user on a port of 1024 or above, or opt out:
 
@@ -328,15 +328,12 @@ services:
         port: 8080
 
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
-      security:
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
