@@ -17,8 +17,8 @@ schema: eve/compose/v2
 project: my-project
 
 registry:
-  host: public.ecr.aws/w7c4v0w3
-  namespace: eve-horizon
+  host: ghcr.io
+  namespace: example-org
   auth:
     username_secret: REGISTRY_USERNAME
     token_secret: REGISTRY_PASSWORD
@@ -590,8 +590,8 @@ The `registry` field configures container image storage.
 
 ```yaml
 registry:
-  host: public.ecr.aws/w7c4v0w3
-  namespace: eve-horizon
+  host: ghcr.io
+  namespace: example-org
   auth:
     username_secret: REGISTRY_USERNAME
     token_secret: REGISTRY_PASSWORD

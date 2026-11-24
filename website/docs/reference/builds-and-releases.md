@@ -177,7 +177,7 @@ The worker requests a short-lived JWT from the internal API (`POST /internal/reg
 
 ```yaml
 registry:
-  host: public.ecr.aws/w7c4v0w3
+  host: ghcr.io
   namespace: myorg
   auth:
     username_secret: REGISTRY_USERNAME
@@ -186,7 +186,7 @@ registry:
 
 | Field | Description |
 |-------|-------------|
-| `host` | Container registry hostname (e.g., `docker.io`, `public.ecr.aws/w7c4v0w3`) |
+| `host` | Container registry hostname (e.g., `docker.io`, `ghcr.io`) |
 | `namespace` | Registry namespace or organization |
 | `auth.username_secret` | Name of the secret containing the registry username (defaults to `REGISTRY_USERNAME`) |
 | `auth.token_secret` | Name of the secret containing the registry token (defaults to `REGISTRY_PASSWORD`) |

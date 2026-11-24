@@ -251,7 +251,7 @@ Job services run as one-off tasks. They are not deployed as persistent container
 ```yaml
 services:
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}
       MIGRATIONS_DIR: /migrations
@@ -260,9 +260,6 @@ services:
         condition: service_healthy
     x-eve:
       role: job
-      security:              # the migrate image sets no USER; the strict profile needs a numeric one
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -285,20 +282,17 @@ pipelines:
 
 ### Recommended migration pattern (Eve-native)
 
-For the simplest setup, use `public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest` as a `role: job` service:
+For the simplest setup, use `ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332` as a `role: job` service:
 
 ```yaml
 services:
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
-      security:              # needed under the strict profile: the image sets no USER
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -325,7 +319,7 @@ For docker-compose workflows:
 ```yaml
 services:
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: postgres://app:app@db:5432/myapp
     volumes:
@@ -782,7 +776,7 @@ services:
         port: 8080
 
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}
       MIGRATIONS_DIR: /migrations
@@ -791,9 +785,6 @@ services:
         condition: service_healthy
     x-eve:
       role: job
-      security:
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations

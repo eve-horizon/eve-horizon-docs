@@ -522,8 +522,8 @@ project: fullstack-example
 
 # Container registry — use Eve's internal registry or bring your own
 registry:
-  host: public.ecr.aws/w7c4v0w3
-  namespace: eve-horizon
+  host: ghcr.io
+  namespace: example-org
   auth:
     username_secret: REGISTRY_USERNAME
     token_secret: REGISTRY_PASSWORD

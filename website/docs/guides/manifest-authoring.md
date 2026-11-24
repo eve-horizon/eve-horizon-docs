@@ -29,8 +29,8 @@ schema: eve/compose/v2
 project: acme-web
 
 registry:
-  host: public.ecr.aws/w7c4v0w3
-  namespace: eve-horizon
+  host: ghcr.io
+  namespace: example-org
   auth:
     username_secret: REGISTRY_USERNAME
     token_secret: REGISTRY_PASSWORD
@@ -72,8 +72,8 @@ The registry block tells Eve where to push and pull container images:
 ```yaml
 # Full object form
 registry:
-  host: public.ecr.aws/w7c4v0w3
-  namespace: eve-horizon
+  host: ghcr.io
+  namespace: example-org
   auth:
     username_secret: REGISTRY_USERNAME
     token_secret: REGISTRY_PASSWORD
@@ -640,15 +640,12 @@ services:
         port: 8080
 
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}   # owner URL: job services only
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
-      security:                  # the migrate image sets no USER; strict needs a numeric one
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
@@ -682,15 +679,12 @@ pipelines:
 ```yaml
 services:
   migrate:
-    image: public.ecr.aws/w7c4v0w3/eve-horizon/migrate:latest
+    image: ghcr.io/eve-horizon/eve-horizon/migrate:0.1.332
     environment:
       DATABASE_URL: ${managed.db.url}
       MIGRATIONS_DIR: /migrations
     x-eve:
       role: job
-      security:                  # needed under the strict profile: the image sets no USER
-        run_as_user: 1000
-        run_as_group: 1000
       files:
         - source: db/migrations
           target: /migrations
